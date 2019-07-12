@@ -193,9 +193,17 @@ module specfem_par
 ! array for NB_RUN_ACOUSTIC_GPU > 1
   integer, dimension(:), allocatable :: run_number_of_the_source
 
-! arrays for elemental computations in compute_forces()
-  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: chi_elem
+! arrays for elemental computations inside a given spectral element
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: chi_elem,chi_elem_old,chi_elem_new
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: field_local
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: dummyx_loc,dummyy_loc,dummyz_loc
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: temp1,temp2,temp3,temp4
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: newtemp1,newtemp2,newtemp3
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: temp1_old,temp2_old,temp3_old
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: temp1_new,temp2_new,temp3_new
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: tempx1,tempx2,tempx3
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: tempy1,tempy2,tempy3
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: tempz1,tempz2,tempz3
 
 ! arrays for elemental computations in compute_forces() for PML elements
   ! derivatives of potential with respect to x, y and z
@@ -355,6 +363,17 @@ module specfem_par_elastic
   integer :: nspec_elastic
 
   logical :: ELASTIC_SIMULATION
+
+
+! to move this part later in a new module specfem_par_nonlinear
+! for surficial soil nonlinearity
+  logical :: NONLINEARITY_SIMULATION
+  real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable :: &
+                sigmastore_xx, sigmastore_yy, sigmastore_zz, &
+                sigmastore_xy, sigmastore_xz, sigmastore_yz                          
+
+
+
 
 ! ADJOINT elastic
 
@@ -557,6 +576,12 @@ module specfem_par_poroelastic
 end module specfem_par_poroelastic
 
 !=====================================================================
+
+
+ 
+
+
+
 
 module specfem_par_movie
 

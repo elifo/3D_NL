@@ -49,7 +49,8 @@
                         NSPEC_ATTENUATION_AB,NSPEC_ATTENUATION_AB_LDDRK, &
                         ANISOTROPY,SIMULATION_TYPE, &
                         NSPEC_ADJOINT,is_moho_top,is_moho_bot, &
-                        irregular_element_number,xix_regular,jacobian_regular
+                        irregular_element_number,xix_regular,jacobian_regular, &
+                        NONLINEARITY_SIMULATION
 
   use specfem_par_elastic, only: c11store,c12store,c13store,c14store,c15store,c16store, &
                         c22store,c23store,c24store,c25store,c26store,c33store, &
@@ -58,7 +59,9 @@
                         factor_common_kappa,COMPUTE_AND_STORE_STRAIN,NSPEC_STRAIN_ONLY, &
                         dsdx_top,dsdx_bot, &
                         ispec2D_moho_top,ispec2D_moho_bot, &
-                        nspec_inner_elastic,nspec_outer_elastic,phase_ispec_inner_elastic
+                        nspec_inner_elastic,nspec_outer_elastic,phase_ispec_inner_elastic, &
+                        sigmastore_xx, sigmastore_yy, sigmastore_zz, &
+                		sigmastore_xy, sigmastore_xz, sigmastore_yz     
 
   use pml_par, only: is_CPML,spec_to_CPML,accel_elastic_CPML, &
                      PML_dux_dxl,PML_dux_dyl,PML_dux_dzl,PML_duy_dxl,PML_duy_dyl,PML_duy_dzl, &
@@ -158,6 +161,21 @@
             tempz1_att_new,tempz2_att_new,tempz3_att_new
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: zero_array
 
+  ! Surficial soil nonlinearity
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: dummy_x_loc_NL, dummy_y_loc_NL, dummy_z_loc_NL
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: tempx1_NL,tempx2_NL,tempx3_NL,&
+								            tempy1_NL,tempy2_NL,tempy3_NL,&
+								            tempz1_NL,tempz2_NL,tempz3_NL
+  real(kind=CUSTOM_REAL) :: duxdxl_NL,duxdyl_NL,duxdzl_NL, &
+  							duydxl_NL,duydyl_NL,duydzl_NL, &
+  							duzdxl_NL,duzdyl_NL,duzdzl_NL
+  real(kind=CUSTOM_REAL) :: dsigma_xx,dsigma_yy,dsigma_zz, &
+							dsigma_xy,dsigma_xz,dsigma_yz
+
+
+
+
+
   ! choses inner/outer elements
   if (iphase == 1) then
     num_elements = nspec_outer_elastic
@@ -188,11 +206,8 @@
     !ZN ZN Do we need a stop statement somewhere in case of
     !ZN ZN SIMULATION_TYPE == 3 and allocated(Kelvin_Voigt_eta) = .true. ??
     if (allocated(Kelvin_Voigt_eta)) then
-
       eta = Kelvin_Voigt_eta(ispec)
-
       if (is_CPML(ispec) .and. eta /= 0._CUSTOM_REAL) stop 'you cannot put a fault inside a PML layer'
-
       do k=1,NGLLZ
         do j=1,NGLLY
           do i=1,NGLLX
@@ -202,8 +217,9 @@
             dummyz_loc(i,j,k) = displ(3,iglob) + eta * veloc(3,iglob)
           enddo
         enddo
-      enddo
-    else
+      enddo    
+    else ! no viscous damping for dynami rupture -Elif.
+      ! GETTING DISPLACEMENT VALUES -Elif.
       do k=1,NGLLZ
         do j=1,NGLLY
           do i=1,NGLLX
@@ -258,6 +274,20 @@
           enddo
     endif
 
+
+    if (NONLINEARITY_SIMULATION  .and. .not. is_CPML(ispec)) then
+       do k=1,NGLLZ
+        do j=1,NGLLY
+          do i=1,NGLLX
+            iglob = ibool(i,j,k,ispec)
+            dummy_x_loc_NL(i,j,k) = veloc(1,iglob)
+            dummy_y_loc_NL(i,j,k) = veloc(2,iglob)
+            dummy_z_loc_NL(i,j,k) = veloc(3,iglob)
+          enddo
+        enddo
+      enddo   	
+    endif
+
     !------------------------------------------------------------------------------
     !---------------------computation of strain in element-------------------------
     !------------------------------------------------------------------------------
@@ -268,6 +298,7 @@
                  tempz1,tempz2,tempz3,zero_array,zero_array,zero_array, &
                  dummyx_loc,dummyy_loc,dummyz_loc, &
                  hprime_xxT,hprime_yyT,hprime_zzT)
+
 
     if (is_CPML(ispec)) then
         if (.not. backward_simulation) then
@@ -296,9 +327,24 @@
                      hprime_xxT,hprime_yyT,hprime_zzT)
     endif
 
+
+    ! For NL, I will call this subroutine
+    ! by using velocity values
+    ! to get strain rate -Elif.
+    if (NONLINEARITY_SIMULATION .and. .not. is_CPML(ispec)) then 
+	    call compute_strain_in_element( &
+	                 tempx1_NL,tempx2_NL,tempx3_NL,zero_array,zero_array,zero_array, &
+	                 tempy1_NL,tempy2_NL,tempy3_NL,zero_array,zero_array,zero_array, &
+	                 tempz1_NL,tempz2_NL,tempz3_NL,zero_array,zero_array,zero_array, &
+	                 dummy_x_loc_NL,dummy_y_loc_NL,dummy_z_loc_NL, &
+	                 hprime_xxT,hprime_yyT,hprime_zzT)
+    endif
+
+
     ispec_irreg = irregular_element_number(ispec)
     if (ispec_irreg == 0) jacobianl = jacobian_regular
 
+    ! loop for GLL points -Elif.
     do k=1,NGLLZ
       do j=1,NGLLY
         do i=1,NGLLX
@@ -444,7 +490,7 @@
                 epsilondev_yz_loc(i,j,k) = 0.5_CUSTOM_REAL * (duzdyl + duydzl)
               endif
 
-          endif
+          endif ! end PML cdt -Elif.
 
           ! save strain on the Moho boundary
           if (SIMULATION_TYPE == 3 .and. SAVE_MOHO_MESH) then
@@ -541,6 +587,62 @@
             endif
           endif
 
+
+          ! Getting strain rates
+          if (NONLINEARITY_SIMULATION .and. .not. is_CPML(ispec)) then
+
+	          if (ispec_irreg /= 0) then !irregular element
+	            xixl = xix(i,j,k,ispec_irreg)
+	            xiyl = xiy(i,j,k,ispec_irreg)
+	            xizl = xiz(i,j,k,ispec_irreg)
+	            etaxl = etax(i,j,k,ispec_irreg)
+	            etayl = etay(i,j,k,ispec_irreg)
+	            etazl = etaz(i,j,k,ispec_irreg)
+	            gammaxl = gammax(i,j,k,ispec_irreg)
+	            gammayl = gammay(i,j,k,ispec_irreg)
+	            gammazl = gammaz(i,j,k,ispec_irreg)
+	            jacobianl = jacobian(i,j,k,ispec_irreg)
+
+	            duxdxl_NL = xixl*tempx1_NL(i,j,k) + etaxl*tempx2_NL(i,j,k) + gammaxl*tempx3_NL(i,j,k)
+	            duxdyl_NL = xiyl*tempx1_NL(i,j,k) + etayl*tempx2_NL(i,j,k) + gammayl*tempx3_NL(i,j,k)
+	            duxdzl_NL = xizl*tempx1_NL(i,j,k) + etazl*tempx2_NL(i,j,k) + gammazl*tempx3_NL(i,j,k)
+
+	            duydxl_NL = xixl*tempy1_NL(i,j,k) + etaxl*tempy2_NL(i,j,k) + gammaxl*tempy3_NL(i,j,k)
+	            duydyl_NL = xiyl*tempy1_NL(i,j,k) + etayl*tempy2_NL(i,j,k) + gammayl*tempy3_NL(i,j,k)
+	            duydzl_NL = xizl*tempy1_NL(i,j,k) + etazl*tempy2_NL(i,j,k) + gammazl*tempy3_NL(i,j,k)
+
+	            duzdxl_NL = xixl*tempz1_NL(i,j,k) + etaxl*tempz2_NL(i,j,k) + gammaxl*tempz3_NL(i,j,k)
+	            duzdyl_NL = xiyl*tempz1_NL(i,j,k) + etayl*tempz2_NL(i,j,k) + gammayl*tempz3_NL(i,j,k)
+	            duzdzl_NL = xizl*tempz1_NL(i,j,k) + etazl*tempz2_NL(i,j,k) + gammazl*tempz3_NL(i,j,k)
+
+	          else !regular element
+
+	            duxdxl_NL = xix_regular*tempx1_NL(i,j,k)
+	            duxdyl_NL = xix_regular*tempx2_NL(i,j,k)
+	            duxdzl_NL = xix_regular*tempx3_NL(i,j,k)
+
+	            duydxl_NL = xix_regular*tempy1_NL(i,j,k)
+	            duydyl_NL = xix_regular*tempy2_NL(i,j,k)
+	            duydzl_NL = xix_regular*tempy3_NL(i,j,k)
+
+	            duzdxl_NL = xix_regular*tempz1_NL(i,j,k)
+	            duzdyl_NL = xix_regular*tempz2_NL(i,j,k)
+	            duzdzl_NL = xix_regular*tempz3_NL(i,j,k)
+	          endif
+
+	          ! for elasticity test
+	          ! precompute some sums to save CPU time
+	          duxdxl_plus_duydyl = duxdxl_NL + duydyl_NL
+	          duxdxl_plus_duzdzl = duxdxl_NL + duzdzl_NL
+	          duydyl_plus_duzdzl = duydyl_NL + duzdzl_NL
+	          duxdyl_plus_duydxl = duxdyl_NL + duydxl_NL
+	          duzdxl_plus_duxdzl = duzdxl_NL + duxdzl_NL
+	          duzdyl_plus_duydzl = duzdyl_NL + duydzl_NL
+
+          endif
+
+
+
           kappal = kappastore(i,j,k,ispec)
           mul = mustore(i,j,k,ispec)
 
@@ -595,9 +697,11 @@
             sigma_xy = mul * duxdyl_plus_duydxl
             sigma_xz = mul * duzdxl_plus_duxdzl
             sigma_yz = mul * duzdyl_plus_duydzl
-
           endif ! ANISOTROPY
 
+
+          ! if modification for a different viscoelastic model,
+          ! here is the place. -Elif.
           ! subtract memory variables if attenuation
           if (ATTENUATION .and. .not. is_CPML(ispec)) then
 
@@ -613,7 +717,42 @@
 
           endif
 
-            if (.not. is_CPML(ispec)) then
+          ! here to call iwan subroutine 
+          ! to get stress values -Elif.
+          if (NONLINEARITY_SIMULATION  .and. .not. is_CPML(ispec)) then
+
+          	! Elasticity test
+            lambdalplus2mul = kappal + FOUR_THIRDS * mul
+            lambdal = lambdalplus2mul - 2._CUSTOM_REAL * mul
+
+            ! compute stress increment dsigma
+            dsigma_xx = lambdalplus2mul * duxdxl_NL + lambdal * duydyl_plus_duzdzl
+            dsigma_yy = lambdalplus2mul * duydyl_NL + lambdal * duxdxl_plus_duzdzl
+            dsigma_zz = lambdalplus2mul * duzdzl_NL + lambdal * duxdxl_plus_duydyl
+            dsigma_xy = mul * duxdyl_plus_duydxl
+            dsigma_xz = mul * duzdxl_plus_duxdzl
+            dsigma_yz = mul * duzdyl_plus_duydzl
+
+            ! assign to total stress matrix
+      		sigmastore_xx(i,j,k,ispec) = sigmastore_xx(i,j,k,ispec)+ dsigma_xx
+      		sigmastore_yy(i,j,k,ispec) = sigmastore_yy(i,j,k,ispec)+ dsigma_yy
+      		sigmastore_zz(i,j,k,ispec) = sigmastore_zz(i,j,k,ispec)+ dsigma_zz
+      		sigmastore_xy(i,j,k,ispec) = sigmastore_xy(i,j,k,ispec)+ dsigma_xy
+      		sigmastore_xz(i,j,k,ispec) = sigmastore_xz(i,j,k,ispec)+ dsigma_xz
+      		sigmastore_yz(i,j,k,ispec) = sigmastore_yz(i,j,k,ispec)+ dsigma_yz
+
+      		! overwriting
+      		sigma_xx = sigmastore_xx(i,j,k,ispec)
+      		sigma_yy = sigmastore_yy(i,j,k,ispec)
+      		sigma_zz = sigmastore_zz(i,j,k,ispec)
+      		sigma_xy = sigmastore_xy(i,j,k,ispec)
+      		sigma_xz = sigmastore_xz(i,j,k,ispec)
+      		sigma_yz = sigmastore_yz(i,j,k,ispec)
+
+		  endif
+
+
+          if (.not. is_CPML(ispec)) then
 
               ! define symmetric components of sigma
               sigma_yx = sigma_xy
@@ -646,10 +785,8 @@
                 tempx3(i,j,k) = jacobianl * sigma_zx * xix_regular ! this goes to accel_x
                 tempy3(i,j,k) = jacobianl * sigma_zy * xix_regular ! this goes to accel_y
                 tempz3(i,j,k) = jacobianl * sigma_zz * xix_regular ! this goes to accel_z
-
               endif
-
-            endif
+          endif
 
         enddo ! of the triple loop on i,j,k
       enddo
@@ -746,21 +883,21 @@
         endif
     endif
 
-      if (is_CPML(ispec) .and. .not. backward_simulation) then
-        ! In backward_simulation involved in SIMULATION_TYPE == 3,
-        ! we only use the stored value on edge of PML interface.
-        ! Thus no computation needs to be done in the PML region in this case.
-          do k = 1,NGLLZ
-            do j = 1,NGLLY
-              do i = 1,NGLLX
-                iglob = ibool(i,j,k,ispec)
-                accel(1,iglob) = accel(1,iglob) - accel_elastic_CPML(1,i,j,k)
-                accel(2,iglob) = accel(2,iglob) - accel_elastic_CPML(2,i,j,k)
-                accel(3,iglob) = accel(3,iglob) - accel_elastic_CPML(3,i,j,k)
-              enddo
+    if (is_CPML(ispec) .and. .not. backward_simulation) then
+      ! In backward_simulation involved in SIMULATION_TYPE == 3,
+      ! we only use the stored value on edge of PML interface.
+      ! Thus no computation needs to be done in the PML region in this case.
+        do k = 1,NGLLZ
+          do j = 1,NGLLY
+            do i = 1,NGLLX
+              iglob = ibool(i,j,k,ispec)
+              accel(1,iglob) = accel(1,iglob) - accel_elastic_CPML(1,i,j,k)
+              accel(2,iglob) = accel(2,iglob) - accel_elastic_CPML(2,i,j,k)
+              accel(3,iglob) = accel(3,iglob) - accel_elastic_CPML(3,i,j,k)
             enddo
           enddo
-      endif
+       enddo
+    endif
 
     ! save deviatoric strain for Runge-Kutta scheme
     if (COMPUTE_AND_STORE_STRAIN) then
@@ -774,6 +911,10 @@
 
   enddo  ! spectral element loop
 
+  ! NOTE: 
+  ! accel is acceleration as input; force as output. -Elif.
+
+
 contains
 
 !
@@ -781,6 +922,13 @@ contains
 !
 
 ! put the code used for computation of strain in element in a subroutine
+
+! here tempx1,tempx2,tempx3 variables are set as initial values 
+! for tempx1_att,tempx2_att,tempx3_att variables.
+! dummyx_loc,dummyy_loc,dummyz_loc are displacements. 
+! I will send veloc values instead of displacements 
+! for NL. -Elif.
+
 
   subroutine compute_strain_in_element(tempx1_att,tempx2_att,tempx3_att,tempx1,tempx2,tempx3, &
                                             tempy1_att,tempy2_att,tempy3_att,tempy1,tempy2,tempy3, &

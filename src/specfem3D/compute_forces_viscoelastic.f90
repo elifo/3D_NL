@@ -49,8 +49,7 @@
                         NSPEC_ATTENUATION_AB,NSPEC_ATTENUATION_AB_LDDRK, &
                         ANISOTROPY,SIMULATION_TYPE, &
                         NSPEC_ADJOINT,is_moho_top,is_moho_bot, &
-                        irregular_element_number,xix_regular,jacobian_regular, &
-                        NONLINEARITY_SIMULATION
+                        irregular_element_number,xix_regular,jacobian_regular
 
   use specfem_par_elastic, only: c11store,c12store,c13store,c14store,c15store,c16store, &
                         c22store,c23store,c24store,c25store,c26store,c33store, &
@@ -61,7 +60,8 @@
                         ispec2D_moho_top,ispec2D_moho_bot, &
                         nspec_inner_elastic,nspec_outer_elastic,phase_ispec_inner_elastic, &
                         sigmastore_xx, sigmastore_yy, sigmastore_zz, &
-                		sigmastore_xy, sigmastore_xz, sigmastore_yz     
+                        sigmastore_xy, sigmastore_xz, sigmastore_yz, &
+                        NONLINEARITY_SIMULATION     
 
   use pml_par, only: is_CPML,spec_to_CPML,accel_elastic_CPML, &
                      PML_dux_dxl,PML_dux_dyl,PML_dux_dzl,PML_duy_dxl,PML_duy_dyl,PML_duy_dzl, &
@@ -164,13 +164,13 @@
   ! Surficial soil nonlinearity
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: dummy_x_loc_NL, dummy_y_loc_NL, dummy_z_loc_NL
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: tempx1_NL,tempx2_NL,tempx3_NL,&
-								            tempy1_NL,tempy2_NL,tempy3_NL,&
-								            tempz1_NL,tempz2_NL,tempz3_NL
+            tempy1_NL,tempy2_NL,tempy3_NL,&
+            tempz1_NL,tempz2_NL,tempz3_NL
   real(kind=CUSTOM_REAL) :: duxdxl_NL,duxdyl_NL,duxdzl_NL, &
-  							duydxl_NL,duydyl_NL,duydzl_NL, &
-  							duzdxl_NL,duzdyl_NL,duzdzl_NL
+              duydxl_NL,duydyl_NL,duydzl_NL, &
+              duzdxl_NL,duzdyl_NL,duzdzl_NL
   real(kind=CUSTOM_REAL) :: dsigma_xx,dsigma_yy,dsigma_zz, &
-							dsigma_xy,dsigma_xz,dsigma_yz
+              dsigma_xy,dsigma_xz,dsigma_yz
 
 
 
@@ -285,7 +285,7 @@
             dummy_z_loc_NL(i,j,k) = veloc(3,iglob)
           enddo
         enddo
-      enddo   	
+      enddo   
     endif
 
     !------------------------------------------------------------------------------
@@ -332,12 +332,12 @@
     ! by using velocity values
     ! to get strain rate -Elif.
     if (NONLINEARITY_SIMULATION .and. .not. is_CPML(ispec)) then 
-	    call compute_strain_in_element( &
-	                 tempx1_NL,tempx2_NL,tempx3_NL,zero_array,zero_array,zero_array, &
-	                 tempy1_NL,tempy2_NL,tempy3_NL,zero_array,zero_array,zero_array, &
-	                 tempz1_NL,tempz2_NL,tempz3_NL,zero_array,zero_array,zero_array, &
-	                 dummy_x_loc_NL,dummy_y_loc_NL,dummy_z_loc_NL, &
-	                 hprime_xxT,hprime_yyT,hprime_zzT)
+      call compute_strain_in_element( &
+                 tempx1_NL,tempx2_NL,tempx3_NL,zero_array,zero_array,zero_array, &
+                 tempy1_NL,tempy2_NL,tempy3_NL,zero_array,zero_array,zero_array, &
+                 tempz1_NL,tempz2_NL,tempz3_NL,zero_array,zero_array,zero_array, &
+                 dummy_x_loc_NL,dummy_y_loc_NL,dummy_z_loc_NL, &
+                 hprime_xxT,hprime_yyT,hprime_zzT)
     endif
 
 
@@ -591,53 +591,53 @@
           ! Getting strain rates
           if (NONLINEARITY_SIMULATION .and. .not. is_CPML(ispec)) then
 
-	          if (ispec_irreg /= 0) then !irregular element
-	            xixl = xix(i,j,k,ispec_irreg)
-	            xiyl = xiy(i,j,k,ispec_irreg)
-	            xizl = xiz(i,j,k,ispec_irreg)
-	            etaxl = etax(i,j,k,ispec_irreg)
-	            etayl = etay(i,j,k,ispec_irreg)
-	            etazl = etaz(i,j,k,ispec_irreg)
-	            gammaxl = gammax(i,j,k,ispec_irreg)
-	            gammayl = gammay(i,j,k,ispec_irreg)
-	            gammazl = gammaz(i,j,k,ispec_irreg)
-	            jacobianl = jacobian(i,j,k,ispec_irreg)
+          if (ispec_irreg /= 0) then !irregular element
+            xixl = xix(i,j,k,ispec_irreg)
+            xiyl = xiy(i,j,k,ispec_irreg)
+            xizl = xiz(i,j,k,ispec_irreg)
+            etaxl = etax(i,j,k,ispec_irreg)
+            etayl = etay(i,j,k,ispec_irreg)
+            etazl = etaz(i,j,k,ispec_irreg)
+            gammaxl = gammax(i,j,k,ispec_irreg)
+            gammayl = gammay(i,j,k,ispec_irreg)
+            gammazl = gammaz(i,j,k,ispec_irreg)
+            jacobianl = jacobian(i,j,k,ispec_irreg)
 
-	            duxdxl_NL = xixl*tempx1_NL(i,j,k) + etaxl*tempx2_NL(i,j,k) + gammaxl*tempx3_NL(i,j,k)
-	            duxdyl_NL = xiyl*tempx1_NL(i,j,k) + etayl*tempx2_NL(i,j,k) + gammayl*tempx3_NL(i,j,k)
-	            duxdzl_NL = xizl*tempx1_NL(i,j,k) + etazl*tempx2_NL(i,j,k) + gammazl*tempx3_NL(i,j,k)
+            duxdxl_NL = xixl*tempx1_NL(i,j,k) + etaxl*tempx2_NL(i,j,k) + gammaxl*tempx3_NL(i,j,k)
+            duxdyl_NL = xiyl*tempx1_NL(i,j,k) + etayl*tempx2_NL(i,j,k) + gammayl*tempx3_NL(i,j,k)
+            duxdzl_NL = xizl*tempx1_NL(i,j,k) + etazl*tempx2_NL(i,j,k) + gammazl*tempx3_NL(i,j,k)
 
-	            duydxl_NL = xixl*tempy1_NL(i,j,k) + etaxl*tempy2_NL(i,j,k) + gammaxl*tempy3_NL(i,j,k)
-	            duydyl_NL = xiyl*tempy1_NL(i,j,k) + etayl*tempy2_NL(i,j,k) + gammayl*tempy3_NL(i,j,k)
-	            duydzl_NL = xizl*tempy1_NL(i,j,k) + etazl*tempy2_NL(i,j,k) + gammazl*tempy3_NL(i,j,k)
+            duydxl_NL = xixl*tempy1_NL(i,j,k) + etaxl*tempy2_NL(i,j,k) + gammaxl*tempy3_NL(i,j,k)
+            duydyl_NL = xiyl*tempy1_NL(i,j,k) + etayl*tempy2_NL(i,j,k) + gammayl*tempy3_NL(i,j,k)
+            duydzl_NL = xizl*tempy1_NL(i,j,k) + etazl*tempy2_NL(i,j,k) + gammazl*tempy3_NL(i,j,k)
 
-	            duzdxl_NL = xixl*tempz1_NL(i,j,k) + etaxl*tempz2_NL(i,j,k) + gammaxl*tempz3_NL(i,j,k)
-	            duzdyl_NL = xiyl*tempz1_NL(i,j,k) + etayl*tempz2_NL(i,j,k) + gammayl*tempz3_NL(i,j,k)
-	            duzdzl_NL = xizl*tempz1_NL(i,j,k) + etazl*tempz2_NL(i,j,k) + gammazl*tempz3_NL(i,j,k)
+            duzdxl_NL = xixl*tempz1_NL(i,j,k) + etaxl*tempz2_NL(i,j,k) + gammaxl*tempz3_NL(i,j,k)
+            duzdyl_NL = xiyl*tempz1_NL(i,j,k) + etayl*tempz2_NL(i,j,k) + gammayl*tempz3_NL(i,j,k)
+            duzdzl_NL = xizl*tempz1_NL(i,j,k) + etazl*tempz2_NL(i,j,k) + gammazl*tempz3_NL(i,j,k)
 
-	          else !regular element
+          else !regular element
 
-	            duxdxl_NL = xix_regular*tempx1_NL(i,j,k)
-	            duxdyl_NL = xix_regular*tempx2_NL(i,j,k)
-	            duxdzl_NL = xix_regular*tempx3_NL(i,j,k)
+            duxdxl_NL = xix_regular*tempx1_NL(i,j,k)
+            duxdyl_NL = xix_regular*tempx2_NL(i,j,k)
+            duxdzl_NL = xix_regular*tempx3_NL(i,j,k)
 
-	            duydxl_NL = xix_regular*tempy1_NL(i,j,k)
-	            duydyl_NL = xix_regular*tempy2_NL(i,j,k)
-	            duydzl_NL = xix_regular*tempy3_NL(i,j,k)
+            duydxl_NL = xix_regular*tempy1_NL(i,j,k)
+            duydyl_NL = xix_regular*tempy2_NL(i,j,k)
+            duydzl_NL = xix_regular*tempy3_NL(i,j,k)
 
-	            duzdxl_NL = xix_regular*tempz1_NL(i,j,k)
-	            duzdyl_NL = xix_regular*tempz2_NL(i,j,k)
-	            duzdzl_NL = xix_regular*tempz3_NL(i,j,k)
-	          endif
+            duzdxl_NL = xix_regular*tempz1_NL(i,j,k)
+            duzdyl_NL = xix_regular*tempz2_NL(i,j,k)
+            duzdzl_NL = xix_regular*tempz3_NL(i,j,k)
+          endif
 
-	          ! for elasticity test
-	          ! precompute some sums to save CPU time
-	          duxdxl_plus_duydyl = duxdxl_NL + duydyl_NL
-	          duxdxl_plus_duzdzl = duxdxl_NL + duzdzl_NL
-	          duydyl_plus_duzdzl = duydyl_NL + duzdzl_NL
-	          duxdyl_plus_duydxl = duxdyl_NL + duydxl_NL
-	          duzdxl_plus_duxdzl = duzdxl_NL + duxdzl_NL
-	          duzdyl_plus_duydzl = duzdyl_NL + duydzl_NL
+          ! for elasticity test
+          ! precompute some sums to save CPU time
+          duxdxl_plus_duydyl = duxdxl_NL + duydyl_NL
+          duxdxl_plus_duzdzl = duxdxl_NL + duzdzl_NL
+          duydyl_plus_duzdzl = duydyl_NL + duzdzl_NL
+          duxdyl_plus_duydxl = duxdyl_NL + duydxl_NL
+          duzdxl_plus_duxdzl = duzdxl_NL + duxdzl_NL
+          duzdyl_plus_duydzl = duzdyl_NL + duydzl_NL
 
           endif
 
@@ -721,7 +721,7 @@
           ! to get stress values -Elif.
           if (NONLINEARITY_SIMULATION  .and. .not. is_CPML(ispec)) then
 
-          	! Elasticity test
+         ! Elasticity test
             lambdalplus2mul = kappal + FOUR_THIRDS * mul
             lambdal = lambdalplus2mul - 2._CUSTOM_REAL * mul
 
@@ -734,22 +734,22 @@
             dsigma_yz = mul * duzdyl_plus_duydzl
 
             ! assign to total stress matrix
-      		sigmastore_xx(i,j,k,ispec) = sigmastore_xx(i,j,k,ispec)+ dsigma_xx
-      		sigmastore_yy(i,j,k,ispec) = sigmastore_yy(i,j,k,ispec)+ dsigma_yy
-      		sigmastore_zz(i,j,k,ispec) = sigmastore_zz(i,j,k,ispec)+ dsigma_zz
-      		sigmastore_xy(i,j,k,ispec) = sigmastore_xy(i,j,k,ispec)+ dsigma_xy
-      		sigmastore_xz(i,j,k,ispec) = sigmastore_xz(i,j,k,ispec)+ dsigma_xz
-      		sigmastore_yz(i,j,k,ispec) = sigmastore_yz(i,j,k,ispec)+ dsigma_yz
+            sigmastore_xx(i,j,k,ispec) = sigmastore_xx(i,j,k,ispec)+ dsigma_xx
+            sigmastore_yy(i,j,k,ispec) = sigmastore_yy(i,j,k,ispec)+ dsigma_yy
+            sigmastore_zz(i,j,k,ispec) = sigmastore_zz(i,j,k,ispec)+ dsigma_zz
+            sigmastore_xy(i,j,k,ispec) = sigmastore_xy(i,j,k,ispec)+ dsigma_xy
+            sigmastore_xz(i,j,k,ispec) = sigmastore_xz(i,j,k,ispec)+ dsigma_xz
+            sigmastore_yz(i,j,k,ispec) = sigmastore_yz(i,j,k,ispec)+ dsigma_yz
 
-      		! overwriting
-      		sigma_xx = sigmastore_xx(i,j,k,ispec)
-      		sigma_yy = sigmastore_yy(i,j,k,ispec)
-      		sigma_zz = sigmastore_zz(i,j,k,ispec)
-      		sigma_xy = sigmastore_xy(i,j,k,ispec)
-      		sigma_xz = sigmastore_xz(i,j,k,ispec)
-      		sigma_yz = sigmastore_yz(i,j,k,ispec)
+            ! overwriting
+            sigma_xx = sigmastore_xx(i,j,k,ispec)
+            sigma_yy = sigmastore_yy(i,j,k,ispec)
+            sigma_zz = sigmastore_zz(i,j,k,ispec)
+            sigma_xy = sigmastore_xy(i,j,k,ispec)
+            sigma_xz = sigmastore_xz(i,j,k,ispec)
+            sigma_yz = sigmastore_yz(i,j,k,ispec)
 
-		  endif
+          endif
 
 
           if (.not. is_CPML(ispec)) then

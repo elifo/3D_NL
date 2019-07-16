@@ -99,6 +99,10 @@ end module constants
   double precision :: MIN_ATTENUATION_PERIOD,MAX_ATTENUATION_PERIOD
   logical :: COMPUTE_FREQ_BAND_AUTOMATIC
 
+  ! nonlinearity -Elif
+  logical :: NONLINEARITY_SIMULATION
+
+
   ! absorbing boundaries
   logical :: PML_CONDITIONS,PML_INSTEAD_OF_FREE_SURFACE
   double precision :: f0_FOR_PML

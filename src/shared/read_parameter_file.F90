@@ -265,6 +265,22 @@
       write(*,*)
     endif
 
+
+    endif
+
+
+! Elif _ 
+! Nonlinearity logical parameter
+! 
+    call read_value_logical(NONLINEARITY_SIMULATION, 'NONLINEARITY_SIMULATION', ier)
+    if (ier /= 0) then
+      some_parameters_missing_from_Par_file = .true.
+      write(*,'(a)') 'NONLINEARITY_SIMULATION         = .true.'
+      write(*,*)
+    endif
+
+
+
     !-------------------------------------------------------
     ! Absorbing boundary conditions
     !-------------------------------------------------------

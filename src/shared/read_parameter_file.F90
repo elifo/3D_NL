@@ -265,17 +265,13 @@
       write(*,*)
     endif
 
-
-    
-
-
 ! Elif _ 
 ! Nonlinearity logical parameter
-! 
-    call read_value_logical(NONLINEARITY_SIMULATION, 'NONLINEARITY_SIMULATION', ier)
+!
+    call read_value_logical(SOIL_NONLINEARITY, 'SOIL_NONLINEARITY', ier)
     if (ier /= 0) then
       some_parameters_missing_from_Par_file = .true.
-      write(*,'(a)') 'NONLINEARITY_SIMULATION         = .true.'
+      write(*,'(a)') 'SOIL_NONLINEARITY               = .false.'
       write(*,*)
     endif
 
@@ -1007,6 +1003,9 @@
     call bcast_all_singlel(ADIOS_FOR_FORWARD_ARRAYS)
     call bcast_all_singlel(ADIOS_FOR_KERNELS)
     call bcast_all_singlel(USE_EXTERNAL_SOURCE_FILE)
+! Elif
+    call bcast_all_singlel(SOIL_NONLINEARITY)
+
 
     ! broadcast all parameters computed from others
     call bcast_all_singlei(IMODEL)

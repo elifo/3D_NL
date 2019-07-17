@@ -152,6 +152,15 @@
     endif
     write(IMAIN,*)
 
+
+! Elif
+   if (SOIL_NONLINEARITY) then
+     write(IMAIN,*)  'soil nonlinearity is considered'
+   endif
+   write(IMAIN,*)
+
+   
+
     if (ANISOTROPY) then
       write(IMAIN,*) 'incorporating anisotropy'
     else

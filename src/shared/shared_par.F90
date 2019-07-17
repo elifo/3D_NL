@@ -100,7 +100,7 @@ end module constants
   logical :: COMPUTE_FREQ_BAND_AUTOMATIC
 
   ! nonlinearity -Elif
-  logical :: NONLINEARITY_SIMULATION
+  logical :: SOIL_NONLINEARITY
 
 
   ! absorbing boundaries

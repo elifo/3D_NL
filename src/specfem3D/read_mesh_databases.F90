@@ -1062,6 +1062,11 @@
 
 
 ! to be checked later -Elif.
+  if (ELASTIC_SIMULATION) then
+     NONLINEARITY_SIMULATION = .true.
+  endif
+
+
   if (NONLINEARITY_SIMULATION) then
     allocate(sigmastore_xx(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
     if (ier /= 0) call exit_MPI_without_rank('error allocating array 1576')

@@ -173,6 +173,9 @@
                 duzdxl_NL,duzdyl_NL,duzdzl_NL
   real(kind=CUSTOM_REAL) :: dsigma_xx,dsigma_yy,dsigma_zz, &
                             dsigma_xy,dsigma_xz,dsigma_yz
+  real(kind=CUSTOM_REAL) :: duxdxl_plus_duydyl_NL,duxdxl_plus_duzdzl_NL,duydyl_plus_duzdzl_NL
+  real(kind=CUSTOM_REAL) :: duxdyl_plus_duydxl_NL,duzdxl_plus_duxdzl_NL,duzdyl_plus_duydzl_NL
+
 
 
   ! Forcing NL -Elif
@@ -283,14 +286,14 @@
 
 
     ! Elif
-    if (NONLINEARITY_SIMULATION  .and. .not. is_CPML(ispec)) then
+    if (NONLINEAR_SIMULATION  .and. .not. is_CPML(ispec)) then
        do k=1,NGLLZ
         do j=1,NGLLY
           do i=1,NGLLX
             iglob = ibool(i,j,k,ispec)
-            dummy_x_loc_NL(i,j,k) = veloc(1,iglob)
-            dummy_y_loc_NL(i,j,k) = veloc(2,iglob)
-            dummy_z_loc_NL(i,j,k) = veloc(3,iglob)
+            dummy_x_loc_NL(i,j,k) = deltat* veloc(1,iglob)
+            dummy_y_loc_NL(i,j,k) = deltat* veloc(2,iglob)
+            dummy_z_loc_NL(i,j,k) = deltat* veloc(3,iglob)
           enddo
         enddo
       enddo     
@@ -340,7 +343,7 @@
 
     ! by using velocity values
     ! to get strain rate -Elif.
-    if (NONLINEARITY_SIMULATION .and. .not. is_CPML(ispec)) then 
+    if (NONLINEAR_SIMULATION .and. .not. is_CPML(ispec)) then 
       call compute_strain_in_element( &
                    tempx1_NL,tempx2_NL,tempx3_NL,zero_array,zero_array,zero_array, &
                    tempy1_NL,tempy2_NL,tempy3_NL,zero_array,zero_array,zero_array, &
@@ -485,7 +488,6 @@
                   PML_duz_dyl_new(i,j,k) =  xix_regular * tempz2_att_new(i,j,k)
                   PML_duz_dzl_new(i,j,k) =  xix_regular * tempz3_att_new(i,j,k)
                 endif
-
               endif
 
               if (COMPUTE_AND_STORE_STRAIN) then
@@ -598,18 +600,9 @@
 
 
           ! Getting strain rates
-          if (NONLINEARITY_SIMULATION .and. .not. is_CPML(ispec)) then
+          if (NONLINEAR_SIMULATION .and. .not. is_CPML(ispec)) then
+
             if (ispec_irreg /= 0) then !irregular element
-              xixl = xix(i,j,k,ispec_irreg)
-              xiyl = xiy(i,j,k,ispec_irreg)
-              xizl = xiz(i,j,k,ispec_irreg)
-              etaxl = etax(i,j,k,ispec_irreg)
-              etayl = etay(i,j,k,ispec_irreg)
-              etazl = etaz(i,j,k,ispec_irreg)
-              gammaxl = gammax(i,j,k,ispec_irreg)
-              gammayl = gammay(i,j,k,ispec_irreg)
-              gammazl = gammaz(i,j,k,ispec_irreg)
-              jacobianl = jacobian(i,j,k,ispec_irreg)
 
               duxdxl_NL = xixl*tempx1_NL(i,j,k) + etaxl*tempx2_NL(i,j,k) + gammaxl*tempx3_NL(i,j,k)
               duxdyl_NL = xiyl*tempx1_NL(i,j,k) + etayl*tempx2_NL(i,j,k) + gammayl*tempx3_NL(i,j,k)
@@ -638,12 +631,12 @@
             endif
             ! for elasticity test
             ! precompute some sums to save CPU time
-            duxdxl_plus_duydyl = duxdxl_NL + duydyl_NL
-            duxdxl_plus_duzdzl = duxdxl_NL + duzdzl_NL
-            duydyl_plus_duzdzl = duydyl_NL + duzdzl_NL
-            duxdyl_plus_duydxl = duxdyl_NL + duydxl_NL
-            duzdxl_plus_duxdzl = duzdxl_NL + duxdzl_NL
-            duzdyl_plus_duydzl = duzdyl_NL + duydzl_NL
+            duxdxl_plus_duydyl_NL = duxdxl_NL + duydyl_NL
+            duxdxl_plus_duzdzl_NL = duxdxl_NL + duzdzl_NL
+            duydyl_plus_duzdzl_NL = duydyl_NL + duzdzl_NL
+            duxdyl_plus_duydxl_NL = duxdyl_NL + duydxl_NL
+            duzdxl_plus_duxdzl_NL = duzdxl_NL + duxdzl_NL
+            duzdyl_plus_duydzl_NL = duzdyl_NL + duydzl_NL
            endif
 
 
@@ -724,19 +717,20 @@
 
           ! here to call iwan subroutine 
           ! to get stress values -Elif.
-          if (NONLINEARITY_SIMULATION  .and. .not. is_CPML(ispec)) then
+          if (NONLINEAR_SIMULATION  .and. .not. is_CPML(ispec)) then
 
             ! Elasticity test
             lambdalplus2mul = kappal + FOUR_THIRDS * mul
             lambdal = lambdalplus2mul - 2._CUSTOM_REAL * mul
 
              ! compute stress increment dsigma
-            dsigma_xx = lambdalplus2mul * duxdxl_NL + lambdal * duydyl_plus_duzdzl
-            dsigma_yy = lambdalplus2mul * duydyl_NL + lambdal * duxdxl_plus_duzdzl
-            dsigma_zz = lambdalplus2mul * duzdzl_NL + lambdal * duxdxl_plus_duydyl
-            dsigma_xy = mul * duxdyl_plus_duydxl
-            dsigma_xz = mul * duzdxl_plus_duxdzl
-            dsigma_yz = mul * duzdyl_plus_duydzl
+            dsigma_xx = lambdalplus2mul * duxdxl_NL + lambdal * duydyl_plus_duzdzl_NL
+            dsigma_yy = lambdalplus2mul * duydyl_NL + lambdal * duxdxl_plus_duzdzl_NL
+            dsigma_zz = lambdalplus2mul * duzdzl_NL + lambdal * duxdxl_plus_duydyl_NL
+            dsigma_xy = mul * duxdyl_plus_duydxl_NL
+            dsigma_xz = mul * duzdxl_plus_duxdzl_NL
+            dsigma_yz = mul * duzdyl_plus_duydzl_NL
+
 
            ! assign to total stress matrix
             sigmastore_xx(i,j,k,ispec) = sigmastore_xx(i,j,k,ispec)+ dsigma_xx
@@ -753,12 +747,14 @@
             sigma_xy = sigmastore_xy(i,j,k,ispec)
             sigma_xz = sigmastore_xz(i,j,k,ispec)
             sigma_yz = sigmastore_yz(i,j,k,ispec)
+
           endif
 
 
 
-            if (.not. is_CPML(ispec)) then
 
+
+            if (.not. is_CPML(ispec)) then
               ! define symmetric components of sigma
               sigma_yx = sigma_xy
               sigma_zx = sigma_xz

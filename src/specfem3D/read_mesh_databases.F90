@@ -41,12 +41,6 @@
   integer :: ier
   character(len=MAX_STRING_LEN) :: database_name
 
-  ! user output
-  if (myrank == 0) then
-    write(IMAIN,*) "Reading mesh databases..."
-    call flush_IMAIN()
-  endif
-
   ! sets file name
   call create_name_database(prname,myrank,LOCAL_PATH)
   database_name = prname(1:len_trim(prname))//'external_mesh.bin'
@@ -475,6 +469,7 @@
   allocate(is_CPML(NSPEC_AB),stat=ier)
   if (ier /= 0) call exit_MPI_without_rank('error allocating array 1504')
   if (ier /= 0) stop 'Error allocating array is_CPML'
+
 ! make sure there are no PMLs by default,
 ! and then below if NSPEC_CPML > 0 we will read the real flags for this mesh from the disk
   is_CPML(:) = .false.
@@ -1061,13 +1056,10 @@
   endif
 
 
+
 ! to be checked later -Elif.
+  !if (NONLINEARITY_SIMULATION) then
   if (ELASTIC_SIMULATION) then
-     NONLINEARITY_SIMULATION = .true.
-  endif
-
-
-  if (NONLINEARITY_SIMULATION) then
     allocate(sigmastore_xx(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
     if (ier /= 0) call exit_MPI_without_rank('error allocating array 1576')
     allocate(sigmastore_yy(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
@@ -1084,12 +1076,9 @@
   endif
 
 
-  ! user output
-  if (myrank == 0) then
-    write(IMAIN,*) "done"
-    write(IMAIN,*)
-    call flush_IMAIN()
-  endif
+
+
+
 
   end subroutine read_mesh_databases
 

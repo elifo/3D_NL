@@ -199,15 +199,6 @@
       write(IMAIN,*) '  no anisotropy'
     endif
 
-
-! -Elif.
-    if (SOIL_NONLINEARITY) then
-      write(IMAIN,*) 'incorporating soil nonlinearity'
-    else
-      write(IMAIN,*) '  no soil nonlinearity'
-    endif
-
-
     if (APPROXIMATE_OCEAN_LOAD) then
       write(IMAIN,*) 'incorporating the oceans using equivalent load'
     else

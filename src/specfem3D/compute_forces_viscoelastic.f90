@@ -285,7 +285,7 @@
     endif
 
 
-    ! Elif
+    ! Elif - to compute strain increment.
     if (NONLINEAR_SIMULATION  .and. .not. is_CPML(ispec)) then
        do k=1,NGLLZ
         do j=1,NGLLY
@@ -629,7 +629,9 @@
               duzdyl_NL = xix_regular*tempz2_NL(i,j,k)
               duzdzl_NL = xix_regular*tempz3_NL(i,j,k)
             endif
-            ! for elasticity test
+
+            ! Elif - to decide later if necessary;
+            ! now only for elasticity test.
             ! precompute some sums to save CPU time
             duxdxl_plus_duydyl_NL = duxdxl_NL + duydyl_NL
             duxdxl_plus_duzdzl_NL = duxdxl_NL + duzdzl_NL
@@ -638,8 +640,6 @@
             duzdxl_plus_duxdzl_NL = duzdxl_NL + duxdzl_NL
             duzdyl_plus_duydzl_NL = duzdyl_NL + duydzl_NL
            endif
-
-
 
 
           kappal = kappastore(i,j,k,ispec)
@@ -717,19 +717,21 @@
 
           ! here to call iwan subroutine 
           ! to get stress values -Elif.
+          ! we're already inside i,j,k loop!
           if (NONLINEAR_SIMULATION  .and. .not. is_CPML(ispec)) then
 
             ! Elasticity test
             lambdalplus2mul = kappal + FOUR_THIRDS * mul
             lambdal = lambdalplus2mul - 2._CUSTOM_REAL * mul
 
-             ! compute stress increment dsigma
-            dsigma_xx = lambdalplus2mul * duxdxl_NL + lambdal * duydyl_plus_duzdzl_NL
-            dsigma_yy = lambdalplus2mul * duydyl_NL + lambdal * duxdxl_plus_duzdzl_NL
-            dsigma_zz = lambdalplus2mul * duzdzl_NL + lambdal * duxdxl_plus_duydyl_NL
-            dsigma_xy = mul * duxdyl_plus_duydxl_NL
-            dsigma_xz = mul * duzdxl_plus_duxdzl_NL
-            dsigma_yz = mul * duzdyl_plus_duydzl_NL
+
+            ! here call Iwan routine to compute dsigma values. -Elif
+
+            call compute_nonlinear_stress(mul,lambdal,lambdalplus2mul, &
+                     duxdxl_NL,duydyl_NL,duzdzl_NL, &
+                     duydyl_plus_duzdzl_NL, duxdxl_plus_duzdzl_NL, duxdxl_plus_duydyl_NL, &
+                     duxdyl_plus_duydxl_NL, duzdxl_plus_duxdzl_NL, duzdyl_plus_duydzl_NL, &
+                     dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
 
 
            ! assign to total stress matrix
@@ -750,50 +752,50 @@
 
           endif
 
+          if (.not. is_CPML(ispec)) then
+            ! define symmetric components of sigma
+            sigma_yx = sigma_xy
+            sigma_zx = sigma_xz
+            sigma_zy = sigma_yz
+            if (ispec_irreg /= 0) then ! irregular element
 
+              ! form dot product with test vector, non-symmetric form (which is useful in the case of PML)
+              tempx1(i,j,k) = jacobianl * (sigma_xx * xixl + sigma_yx * xiyl + sigma_zx * xizl) ! this goes to accel_x
+              tempy1(i,j,k) = jacobianl * (sigma_xy * xixl + sigma_yy * xiyl + sigma_zy * xizl) ! this goes to accel_y
+              tempz1(i,j,k) = jacobianl * (sigma_xz * xixl + sigma_yz * xiyl + sigma_zz * xizl) ! this goes to accel_z
 
+              tempx2(i,j,k) = jacobianl * (sigma_xx * etaxl + sigma_yx * etayl + sigma_zx * etazl) ! this goes to accel_x
+              tempy2(i,j,k) = jacobianl * (sigma_xy * etaxl + sigma_yy * etayl + sigma_zy * etazl) ! this goes to accel_y
+              tempz2(i,j,k) = jacobianl * (sigma_xz * etaxl + sigma_yz * etayl + sigma_zz * etazl) ! this goes to accel_z
 
+              tempx3(i,j,k) = jacobianl * (sigma_xx * gammaxl + sigma_yx * gammayl + sigma_zx * gammazl) ! this goes to accel_x
+              tempy3(i,j,k) = jacobianl * (sigma_xy * gammaxl + sigma_yy * gammayl + sigma_zy * gammazl) ! this goes to accel_y
+              tempz3(i,j,k) = jacobianl * (sigma_xz * gammaxl + sigma_yz * gammayl + sigma_zz * gammazl) ! this goes to accel_z
+            else !regular element
+           ! form dot product with test vector, non-symmetric form (which is useful in the case of PML)
+              tempx1(i,j,k) = jacobianl * sigma_xx * xix_regular ! this goes to accel_x
+              tempy1(i,j,k) = jacobianl * sigma_xy * xix_regular ! this goes to accel_y
+              tempz1(i,j,k) = jacobianl * sigma_xz * xix_regular ! this goes to accel_z
 
-            if (.not. is_CPML(ispec)) then
-              ! define symmetric components of sigma
-              sigma_yx = sigma_xy
-              sigma_zx = sigma_xz
-              sigma_zy = sigma_yz
-              if (ispec_irreg /= 0) then ! irregular element
+              tempx2(i,j,k) = jacobianl * sigma_yx * xix_regular ! this goes to accel_x
+              tempy2(i,j,k) = jacobianl * sigma_yy * xix_regular ! this goes to accel_y
+              tempz2(i,j,k) = jacobianl * sigma_yz * xix_regular ! this goes to accel_z
 
-                ! form dot product with test vector, non-symmetric form (which is useful in the case of PML)
-                tempx1(i,j,k) = jacobianl * (sigma_xx * xixl + sigma_yx * xiyl + sigma_zx * xizl) ! this goes to accel_x
-                tempy1(i,j,k) = jacobianl * (sigma_xy * xixl + sigma_yy * xiyl + sigma_zy * xizl) ! this goes to accel_y
-                tempz1(i,j,k) = jacobianl * (sigma_xz * xixl + sigma_yz * xiyl + sigma_zz * xizl) ! this goes to accel_z
-
-                tempx2(i,j,k) = jacobianl * (sigma_xx * etaxl + sigma_yx * etayl + sigma_zx * etazl) ! this goes to accel_x
-                tempy2(i,j,k) = jacobianl * (sigma_xy * etaxl + sigma_yy * etayl + sigma_zy * etazl) ! this goes to accel_y
-                tempz2(i,j,k) = jacobianl * (sigma_xz * etaxl + sigma_yz * etayl + sigma_zz * etazl) ! this goes to accel_z
-
-                tempx3(i,j,k) = jacobianl * (sigma_xx * gammaxl + sigma_yx * gammayl + sigma_zx * gammazl) ! this goes to accel_x
-                tempy3(i,j,k) = jacobianl * (sigma_xy * gammaxl + sigma_yy * gammayl + sigma_zy * gammazl) ! this goes to accel_y
-                tempz3(i,j,k) = jacobianl * (sigma_xz * gammaxl + sigma_yz * gammayl + sigma_zz * gammazl) ! this goes to accel_z
-              else !regular element
-             ! form dot product with test vector, non-symmetric form (which is useful in the case of PML)
-                tempx1(i,j,k) = jacobianl * sigma_xx * xix_regular ! this goes to accel_x
-                tempy1(i,j,k) = jacobianl * sigma_xy * xix_regular ! this goes to accel_y
-                tempz1(i,j,k) = jacobianl * sigma_xz * xix_regular ! this goes to accel_z
-
-                tempx2(i,j,k) = jacobianl * sigma_yx * xix_regular ! this goes to accel_x
-                tempy2(i,j,k) = jacobianl * sigma_yy * xix_regular ! this goes to accel_y
-                tempz2(i,j,k) = jacobianl * sigma_yz * xix_regular ! this goes to accel_z
-
-                tempx3(i,j,k) = jacobianl * sigma_zx * xix_regular ! this goes to accel_x
-                tempy3(i,j,k) = jacobianl * sigma_zy * xix_regular ! this goes to accel_y
-                tempz3(i,j,k) = jacobianl * sigma_zz * xix_regular ! this goes to accel_z
-
-              endif
-
+              tempx3(i,j,k) = jacobianl * sigma_zx * xix_regular ! this goes to accel_x
+              tempy3(i,j,k) = jacobianl * sigma_zy * xix_regular ! this goes to accel_y
+              tempz3(i,j,k) = jacobianl * sigma_zz * xix_regular ! this goes to accel_z
             endif
+          endif
 
         enddo ! of the triple loop on i,j,k
       enddo
     enddo
+
+
+    ! Elif.
+    ! Stress computation is done.
+    ! Below is the force computation.
+
 
     if (is_CPML(ispec) .and. .not. backward_simulation) then
         ! In backward_simulation involved in SIMULATION_TYPE == 3,

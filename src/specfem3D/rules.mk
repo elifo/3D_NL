@@ -42,6 +42,7 @@ specfem3D_TARGETS = \
 	$(EMPTY_MACRO)
 
 
+# Elif- added object file name for new file
 specfem3D_OBJECTS = \
 	$O/specfem3D_par.spec_module.o \
         $O/asdf_data.spec_module.o \
@@ -72,6 +73,7 @@ specfem3D_OBJECTS = \
 	$O/compute_gradient_in_acoustic.spec.o \
 	$O/compute_interpolated_dva.spec.o \
 	$O/compute_kernels.spec.o \
+	$O/compute_nonlinear_stress.spec.o \
 	$O/compute_seismograms.spec.o \
 	$O/compute_stacey_acoustic.spec.o \
 	$O/compute_stacey_viscoelastic.spec.o \
@@ -354,7 +356,7 @@ $O/initialize_simulation.spec.o: ${SETUP}/version.fh
 
 ## pml
 $O/compute_coupling_acoustic_el.spec.o: $O/pml_par.spec.o
-$O/compute_coupling_viscoelastic_ac.spec.o: $O/pml_par.spec.o
+$O/compute_coupling_viscoelastic_ac.spec.o: $O/pml_par.spec.o 
 $O/compute_forces_acoustic_calling_routine.spec.o: $O/pml_par.spec.o
 $O/compute_forces_acoustic_NGLL5_fast.spec.o: $O/pml_par.spec.o
 $O/compute_forces_acoustic_NGLLnot5_generic_slow.spec.o: $O/pml_par.spec.o
@@ -366,10 +368,11 @@ $O/pml_output_VTKs.spec.o: $O/pml_par.spec.o
 $O/read_mesh_databases.spec.o: $O/pml_par.spec.o
 $O/update_displacement_scheme.spec.o: $O/pml_par.spec.o
 
+# Elif- mentioned the dependecy of new file here.
 ## fault
 $O/fault_solver_dynamic.spec.o: $O/fault_solver_common.spec.o
 $O/fault_solver_kinematic.spec.o: $O/fault_solver_common.spec.o
-$O/compute_forces_viscoelastic.spec.o: $O/pml_par.spec.o $O/fault_solver_dynamic.spec.o
+$O/compute_forces_viscoelastic.spec.o: $O/pml_par.spec.o $O/fault_solver_dynamic.spec.o 
 $O/compute_forces_viscoelastic_calling_routine.spec.o: $O/pml_par.spec.o $O/fault_solver_dynamic.spec.o $O/fault_solver_kinematic.spec.o
 
 $O/prepare_timerun.spec.o: $O/pml_par.spec.o $O/fault_solver_dynamic.spec.o $O/fault_solver_kinematic.spec.o

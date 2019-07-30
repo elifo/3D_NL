@@ -73,7 +73,6 @@ specfem3D_OBJECTS = \
 	$O/compute_gradient_in_acoustic.spec.o \
 	$O/compute_interpolated_dva.spec.o \
 	$O/compute_kernels.spec.o \
-	$O/compute_nonlinear_stress.spec.o \
 	$O/compute_seismograms.spec.o \
 	$O/compute_stacey_acoustic.spec.o \
 	$O/compute_stacey_viscoelastic.spec.o \
@@ -100,6 +99,7 @@ specfem3D_OBJECTS = \
 	$O/locate_source.spec.o \
 	$O/make_gravity.spec.o \
 	$O/noise_tomography.spec.o \
+	$O/nonlinear_solver_iwan.spec.o \
 	$O/pml_allocate_arrays.spec.o \
 	$O/pml_output_VTKs.spec.o \
 	$O/pml_compute_accel_contribution.spec.o \
@@ -170,6 +170,7 @@ specfem3D_MODULES = \
 	$(FC_MODDIR)/fault_solver_kinematic.$(FC_MODEXT) \
 	$(FC_MODDIR)/gravity_perturbation.$(FC_MODEXT) \
 	$(FC_MODDIR)/image_pnm_par.$(FC_MODEXT) \
+	$(FC_MODDIR)/nonlinear_solver_iwan.$(FC_MODEXT) \
 	$(FC_MODDIR)/pml_par.$(FC_MODEXT) \
 	$(FC_MODDIR)/specfem_par.$(FC_MODEXT) \
 	$(FC_MODDIR)/specfem_par_acoustic.$(FC_MODEXT) \
@@ -191,6 +192,8 @@ specfem3D_SHARED_OBJECTS += $(COND_MPI_OBJECTS)
 ###
 specfem3D_SHARED_OBJECTS += $(COND_OMP_OBJECTS)
 
+
+# ask this part to Pablo, -Elif.
 ###
 ### CUDA
 ###
@@ -372,7 +375,7 @@ $O/update_displacement_scheme.spec.o: $O/pml_par.spec.o
 ## fault
 $O/fault_solver_dynamic.spec.o: $O/fault_solver_common.spec.o
 $O/fault_solver_kinematic.spec.o: $O/fault_solver_common.spec.o
-$O/compute_forces_viscoelastic.spec.o: $O/pml_par.spec.o $O/fault_solver_dynamic.spec.o 
+$O/compute_forces_viscoelastic.spec.o: $O/pml_par.spec.o $O/fault_solver_dynamic.spec.o $O/nonlinear_solver_iwan.spec.o
 $O/compute_forces_viscoelastic_calling_routine.spec.o: $O/pml_par.spec.o $O/fault_solver_dynamic.spec.o $O/fault_solver_kinematic.spec.o
 
 $O/prepare_timerun.spec.o: $O/pml_par.spec.o $O/fault_solver_dynamic.spec.o $O/fault_solver_kinematic.spec.o

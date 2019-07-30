@@ -143,7 +143,6 @@ inverse_problem_for_model_OBJECTS += \
 	$O/compute_gradient_in_acoustic.spec.o \
 	$O/compute_interpolated_dva.spec.o \
 	$O/compute_kernels.spec.o \
-	$O/compute_nonlinear_stress.spec.o \
 	$O/compute_seismograms.spec.o \
 	$O/compute_stacey_acoustic.spec.o \
 	$O/compute_stacey_viscoelastic.spec.o \
@@ -169,6 +168,7 @@ inverse_problem_for_model_OBJECTS += \
 	$O/locate_source.spec.o \
 	$O/make_gravity.spec.o \
 	$O/noise_tomography.spec.o \
+	$O/nonlinear_solver_iwan.spec.o \
 	$O/pml_allocate_arrays.spec.o \
 	$O/pml_output_VTKs.spec.o \
 	$O/pml_compute_accel_contribution.spec.o \

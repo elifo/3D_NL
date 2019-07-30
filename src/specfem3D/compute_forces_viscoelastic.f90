@@ -40,6 +40,8 @@
 
   use fault_solver_dynamic, only: Kelvin_Voigt_eta
 
+  use nonlinear_solver_iwan, only: compute_nonlinear_stress
+
   use specfem_par, only: SAVE_MOHO_MESH,USE_LDDRK,xix,xiy,xiz,etax,etay,etaz,gammax,gammay,gammaz, &
                         NSPEC_AB,NGLOB_AB,hprime_xxT,hprime_yyT,hprime_zzT, &
                         hprimewgll_xx,hprimewgll_yy,hprimewgll_zz, &
@@ -177,8 +179,9 @@
   real(kind=CUSTOM_REAL) :: duxdyl_plus_duydxl_NL,duzdxl_plus_duxdzl_NL,duzdyl_plus_duydzl_NL
 
 
-
   ! Forcing NL -Elif
+  ! instead of this, I should associate NL with elements:
+  ! like is_pml(ispec), I can use is_nonlinear(ispec).
   NONLINEAR_SIMULATION = .true.                          
 
 
@@ -718,14 +721,19 @@
           ! here to call iwan subroutine 
           ! to get stress values -Elif.
           ! we're already inside i,j,k loop!
+
+
           if (NONLINEAR_SIMULATION  .and. .not. is_CPML(ispec)) then
 
             ! Elasticity test
             lambdalplus2mul = kappal + FOUR_THIRDS * mul
             lambdal = lambdalplus2mul - 2._CUSTOM_REAL * mul
 
+            ! before calling Iwan, 
+            ! get Gm0 and Gact values; then give them as input !
+            !             mu     = m%Gm0(i,j)   
+            !             Gact   = m%Gact(i,j)
 
-            ! here call Iwan routine to compute dsigma values. -Elif
 
             call compute_nonlinear_stress(mul,lambdal,lambdalplus2mul, &
                      duxdxl_NL,duydyl_NL,duzdzl_NL, &

@@ -356,12 +356,25 @@ module specfem_par_elastic
 
   logical :: ELASTIC_SIMULATION
 
+!
 ! NONLINEARITY -Elif
+
+  integer :: NSPR
+
   real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable :: &
                 sigmastore_xx, sigmastore_yy, sigmastore_zz, &
                 sigmastore_xy, sigmastore_xz, sigmastore_yz      
 
+  integer, dimension(:,:,:,:), allocatable :: &
+                n_active_surface
 
+  real(kind=CUSTOM_REAL), dimension(:,:,:,:,:), allocatable :: &
+                S_NL, F_NL, R_NL, CNinv_NL
+
+  real(kind=CUSTOM_REAL), dimension(:,:,:,:,:), allocatable :: &
+                Sa_NL_xx, Sa_NL_yy, Sa_NL_zz, Sa_NL_xy, &
+                Sa_NL_yz, Sa_NL_xz 
+!
 
 
 ! ADJOINT elastic

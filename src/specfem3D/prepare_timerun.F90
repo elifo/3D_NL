@@ -36,6 +36,7 @@
   use specfem_par_movie
   use fault_solver_dynamic, only: BC_DYNFLT_init
   use fault_solver_kinematic, only: BC_KINFLT_init
+  use nonlinear_solver_iwan, only: MAT_IWAN_init
 
   implicit none
 
@@ -65,6 +66,10 @@
 
   ! prepares attenuation arrays
   call prepare_attenuation()
+
+  ! prepares attenuation arrays
+  call MAT_IWAN_init()
+
 
   ! prepares gravity arrays
   call prepare_gravity()

@@ -62,7 +62,12 @@
                         ispec2D_moho_top,ispec2D_moho_bot, &
                         nspec_inner_elastic,nspec_outer_elastic,phase_ispec_inner_elastic, &
                         sigmastore_xx, sigmastore_yy, sigmastore_zz, &
-                        sigmastore_xy, sigmastore_xz, sigmastore_yz                         
+                        sigmastore_xy, sigmastore_xz, sigmastore_yz, &
+                        NSPR, n_active_surface, S_NL, F_NL, R_NL, CNinv_NL, &
+                        Sa_NL_xx, Sa_NL_yy, Sa_NL_zz, Sa_NL_xy, &
+                        Sa_NL_yz, Sa_NL_xz
+!
+
 
   use pml_par, only: is_CPML,spec_to_CPML,accel_elastic_CPML, &
                      PML_dux_dxl,PML_dux_dyl,PML_dux_dzl,PML_duy_dxl,PML_duy_dyl,PML_duy_dzl, &
@@ -166,6 +171,8 @@
   ! Elif - for the moment
   ! I force nonlinearity everywhere
   logical :: NONLINEAR_SIMULATION
+
+
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: dummy_x_loc_NL, dummy_y_loc_NL, dummy_z_loc_NL
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: tempx1_NL,tempx2_NL,tempx3_NL,&
                             tempy1_NL,tempy2_NL,tempy3_NL,&
@@ -182,7 +189,8 @@
   ! Forcing NL -Elif
   ! instead of this, I should associate NL with elements:
   ! like is_pml(ispec), I can use is_nonlinear(ispec).
-  NONLINEAR_SIMULATION = .true.                          
+  NONLINEAR_SIMULATION = .true.        
+
 
 
 
@@ -727,19 +735,26 @@
 
             ! Elasticity test
             lambdalplus2mul = kappal + FOUR_THIRDS * mul
-            lambdal = lambdalplus2mul - 2._CUSTOM_REAL * mul
-
-            ! before calling Iwan, 
-            ! get Gm0 and Gact values; then give them as input !
-            !             mu     = m%Gm0(i,j)   
-            !             Gact   = m%Gact(i,j)
+            lambdal = lambdalplus2mul - 2e0_CUSTOM_REAL* mul
 
 
-            call compute_nonlinear_stress(mul,lambdal,lambdalplus2mul, &
+            ! before calling Iwan:
+
+
+
+            call compute_nonlinear_stress(i,j,k,ispec, NSPR, n_active_surface(i,j,k,ispec), &
+                     S_NL(:,i,j,k,ispec), F_NL(:,i,j,k,ispec), &
+                     R_NL(:,i,j,k,ispec), CNinv_NL(:,i,j,k,ispec), &
+                     Sa_NL_xx(:,i,j,k,ispec), &
+                     Sa_NL_yy(:,i,j,k,ispec), Sa_NL_zz(:,i,j,k,ispec), &
+                     Sa_NL_xy(:,i,j,k,ispec), Sa_NL_xz(:,i,j,k,ispec), &
+                     Sa_NL_yz(:,i,j,k,ispec), &
+                     mul,lambdal,lambdalplus2mul, &
                      duxdxl_NL,duydyl_NL,duzdzl_NL, &
                      duydyl_plus_duzdzl_NL, duxdxl_plus_duzdzl_NL, duxdxl_plus_duydyl_NL, &
                      duxdyl_plus_duydxl_NL, duzdxl_plus_duxdzl_NL, duzdyl_plus_duydzl_NL, &
                      dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
+
 
 
            ! assign to total stress matrix

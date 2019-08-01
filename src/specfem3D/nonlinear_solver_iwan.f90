@@ -49,7 +49,8 @@ subroutine MAT_IWAN_init()
 
                     R_NL(:,i,j,k,ispec) = 0e0_CUSTOM_REAL
                     CNinv_NL(:,i,j,k,ispec) = 0e0_CUSTOM_REAL
-                    S_NL(:,i,j,k,ispec) = 1e-3_CUSTOM_REAL
+                    !S_NL(:,i,j,k,ispec) = 1e-3_CUSTOM_REAL
+                    S_NL(:,i,j,k,ispec) = 0e0_CUSTOM_REAL
                     F_NL(:,i,j,k,ispec) = 0e0_CUSTOM_REAL
 
                     n_active_surface(i,j,k,ispec) = -1
@@ -66,12 +67,25 @@ subroutine MAT_IWAN_init()
                         gamma_ref = 0.000365e0_CUSTOM_REAL
                         Gm0 = mustore(i,j,k,ispec)
 
+
                         call MAT_IWAN_backbone_elem (gamma_ref, NSPR, Gm0, &
                                     R_NL(:,i,j,k,ispec),CNinv_NL(:,i,j,k,ispec) ) 
 
-! ! not working this test (!).
-!                         call MAT_IWAN_backbone_elem_testing (gamma_ref, NSPR, Gm0, &
-!                                     R_NL(:,i,j,k,ispec),CNinv_NL(:,i,j,k,ispec) ) 
+!                        if (ispec == 50 .and. i==1 .and. j==1 .and. k ==1) then
+!                            print*, 'Found shear modulus: ', Gm0
+!                            print*, R_NL(:,i,j,k,ispec), CNinv_NL(:,i,j,k,ispec)
+!                        endif
+
+
+! not working
+                         call MAT_IWAN_backbone_elem_testing (gamma_ref, NSPR, Gm0, &
+                                     R_NL(:,i,j,k,ispec),CNinv_NL(:,i,j,k,ispec) ) 
+
+
+!                        if (ispec == 50 .and. i==1 .and. j==1 .and. k ==1) then
+!                            print*, 'Found shear modulus: ', Gm0
+!                            print*, R_NL(:,i,j,k,ispec), CNinv_NL(:,i,j,k,ispec)
+!                        endif
 
 
                     endif
@@ -115,8 +129,8 @@ subroutine MAT_IWAN_backbone_elem_testing(gref,Nspr,mu,R,CNinv)
     
     summy = 0e0_CUSTOM_REAL
     do i = 1,Nspr-1
-        CNinv(i) = ( gamma(i+1)/2e0_CUSTOM_REAL - gamma(i)/2d0 )/ &
-                        ( R(i+1)- R(i) )- 0.5d0/mu- summy
+        CNinv(i) = ( gamma(i+1)/2e0_CUSTOM_REAL - gamma(i)/2e0_CUSTOM_REAL )/ &
+                        ( R(i+1)- R(i) )- 0.5e0_CUSTOM_REAL/mu- summy
         summy = summy+ CNinv(i)
     enddo   
 
@@ -151,8 +165,8 @@ subroutine MAT_IWAN_backbone_elem(gref,Nspr,mu,R,CNinv)
     
     summy = 0e0_CUSTOM_REAL
     do i = 1,Nspr-1
-        CNinv(i) = ( gamma(i+1)/ 2e0_CUSTOM_REAL- gamma(i)/ 2d0 )/ &
-                        ( R(i+1)- R(i) )- 0.5d0/ mu- summy
+        CNinv(i) = ( gamma(i+1)/2e0_CUSTOM_REAL - gamma(i)/2e0_CUSTOM_REAL )/ &
+                        ( R(i+1)- R(i) )- 0.5e0_CUSTOM_REAL/mu- summy
         summy = summy+ CNinv(i)
     enddo   
 
@@ -165,6 +179,7 @@ subroutine  compute_nonlinear_stress (ii,jj,kk,ispec, Nspr, n_active_surface, &
             duxdxl_NL,duydyl_NL,duzdzl_NL, &
             duydyl_plus_duzdzl_NL, duxdxl_plus_duzdzl_NL, duxdxl_plus_duydyl_NL, &
             duxdyl_plus_duydxl_NL, duzdxl_plus_duxdzl_NL, duzdyl_plus_duydzl_NL, &
+             duxdyl_NL, duxdzl_NL, duydzl_NL, &
             dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
 
     implicit none
@@ -180,45 +195,66 @@ subroutine  compute_nonlinear_stress (ii,jj,kk,ispec, Nspr, n_active_surface, &
 
     real(kind=CUSTOM_REAL), intent(in) :: lambdal,mul,lambdalplus2mul
     real(kind=CUSTOM_REAL), intent(in) :: duxdxl_NL, duydyl_NL, duzdzl_NL
+    real(kind=CUSTOM_REAL), intent(in) :: duxdyl_NL, duxdzl_NL, duydzl_NL
     real(kind=CUSTOM_REAL), intent(in) :: duydyl_plus_duzdzl_NL, duxdxl_plus_duzdzl_NL, duxdxl_plus_duydyl_NL
     real(kind=CUSTOM_REAL), intent(in) :: duxdyl_plus_duydxl_NL, duzdxl_plus_duxdzl_NL, duzdyl_plus_duydzl_NL    
     real(kind=CUSTOM_REAL), intent(out) :: dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz
 
 
     ! local parameters
-    real(kind=CUSTOM_REAL) :: Gm0, ni 
     integer :: surface, errorflag, start, k, j, D
-    integer, dimension(6) :: INDX(6)
-
+    integer :: INDX(6)
+    real(kind=CUSTOM_REAL) :: Gm0, ni    
     real(kind=CUSTOM_REAL) :: lambda_nl, lambdalplus2mu_nl, Kmod
     real(kind=CUSTOM_REAL) :: dsigm, depsm
     real(kind=CUSTOM_REAL) :: dS(6), de(6)
     real(kind=CUSTOM_REAL) :: Ed(6,6), Esd(6,6)
     real(kind=CUSTOM_REAL) :: dF(Nspr)
-
+    real(kind=CUSTOM_REAL) :: dummy, dummy2, infinity
 
 
     
-    ! this part can be moved to prep before time loop !!!
-!     ! update moduli
+
+! ELASTICITY TEST I
+!    Gm0   = mul 
+!    call MAT_IWAN_elastic (Gm0,lambdal,lambdalplus2mul, &
+!            duxdxl_NL,duydyl_NL,duzdzl_NL, &
+!            duydyl_plus_duzdzl_NL, duxdxl_plus_duzdzl_NL, duxdxl_plus_duydyl_NL, &
+!            duxdyl_plus_duydxl_NL, duzdxl_plus_duxdzl_NL, duzdyl_plus_duydzl_NL, &
+!            dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
+!    return
+
+
+
+
+! ELASTICITY TEST II
+!    ! this part can be moved to prep before time loop !!!
+!    ! update moduli
+!    Gm0   = mul 
+!    ni    = 0.3875e0_CUSTOM_REAL 
+!    Kmod = 2e0_CUSTOM_REAL* Gm0* (1e0_CUSTOM_REAL+ ni) ! E (Young modulus) 
+!    lambda_nl = Kmod* ni/ (1e0_CUSTOM_REAL+ ni)/ (1e0_CUSTOM_REAL- 2e0_CUSTOM_REAL* ni)
+!    lambdalplus2mu_nl = lambda_nl+ 2e0_CUSTOM_REAL* Gm0
+!    Kmod = Kmod/ (3e0_CUSTOM_REAL* (1e0_CUSTOM_REAL- 2e0_CUSTOM_REAL* ni)) ! K (Bulk modulus)
+
+!    call MAT_IWAN_elastic (Gm0,lambda_nl,lambdalplus2mu_nl, &
+!            duxdxl_NL,duydyl_NL,duzdzl_NL, &
+!            duydyl_plus_duzdzl_NL, duxdxl_plus_duzdzl_NL, duxdxl_plus_duydyl_NL, &
+!            duxdyl_plus_duydxl_NL, duzdxl_plus_duxdzl_NL, duzdyl_plus_duydzl_NL, &
+!             dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
+!    return
+
+
+
+
+! ELASTICITY TEST III
+
     Gm0   = mul 
-    ni    = 0.2987478e0_CUSTOM_REAL 
+    ni    = 0.3875e0_CUSTOM_REAL 
     Kmod = 2e0_CUSTOM_REAL* Gm0* (1e0_CUSTOM_REAL+ ni) ! E (Young modulus) 
     lambda_nl = Kmod* ni/ (1e0_CUSTOM_REAL+ ni)/ (1e0_CUSTOM_REAL- 2e0_CUSTOM_REAL* ni)
     lambdalplus2mu_nl = lambda_nl+ 2e0_CUSTOM_REAL* Gm0
     Kmod = Kmod/ (3e0_CUSTOM_REAL* (1e0_CUSTOM_REAL- 2e0_CUSTOM_REAL* ni)) ! K (Bulk modulus)
-
-
-
-!     ! this part can be moved to prep before time loop !!!
-! !     ! update moduli
-!     Gm0   = mul 
-!     ni    = 0.2987478e0_CUSTOM_REAL 
-!     Kmod = 2e0_CUSTOM_REAL* Gm0* (1e0_CUSTOM_REAL+ ni) ! E (Young modulus) 
-!     Kmod = Kmod/ (3e0_CUSTOM_REAL* (1e0_CUSTOM_REAL- 2e0_CUSTOM_REAL* ni)) ! K (Bulk modulus)
-!     lambda_nl = lambdal
-!     lambdalplus2mu_nl = lambdalplus2mul
-
 
 
     ! mean stress
@@ -253,16 +289,21 @@ subroutine  compute_nonlinear_stress (ii,jj,kk,ispec, Nspr, n_active_surface, &
     endif
 
 
+
+
     de    = 0e0_CUSTOM_REAL
     depsm = (duxdxl_NL+ duydyl_NL+ duzdzl_NL)/ 3e0_CUSTOM_REAL
     ! Incremental deviatoric strain
     de(1) = duxdxl_NL- depsm
     de(2) = duydyl_NL- depsm
     de(6) = duzdzl_NL- depsm
+    de(3) = duxdyl_NL
+    de(4) = duxdzl_NL
+    de(5) = duydzl_NL
     !!! check here !!!
-    de(3) = duxdyl_plus_duydxl_NL  ! deps_xy+ deps_yx
-    de(4) = duzdxl_plus_duxdzl_NL  ! deps_xz+ deps_zx
-    de(5) = duzdyl_plus_duydzl_NL  ! deps_yz+ deps_zy
+!    de(3) = duxdyl_plus_duydxl_NL  ! deps_xy+ deps_yx
+!    de(4) = duzdxl_plus_duxdzl_NL  ! deps_xz+ deps_zx
+!    de(5) = duzdyl_plus_duydzl_NL  ! deps_yz+ deps_zy
 
 
     if (n_active_surface == 0) then
@@ -270,16 +311,16 @@ subroutine  compute_nonlinear_stress (ii,jj,kk,ispec, Nspr, n_active_surface, &
         dF(1) = MAT_IWAN_dsurface(S, Sa_xx(1), Sa_yy(1), Sa_zz(1), Sa_xy(1), Sa_xz(1), Sa_yz(1), de)
     endif
 
-    
+
+   
     surface = 0
     if (n_active_surface > 0) then
 
         do j = 1,n_active_surface
 
-            !!! testing
-            F(j) = max(1e-3_CUSTOM_REAL, F(j))
 
-            ! New centers          
+
+            ! New centers (traceback: here is the bug)  
             Sa_xx(j) = S(1)- R(j)/ sqrt(F(j))* (S(1)- Sa_xx(j))
             Sa_yy(j) = S(2)- R(j)/ sqrt(F(j))* (S(2)- Sa_yy(j))
             Sa_zz(j) = S(6)- R(j)/ sqrt(F(j))* (S(6)- Sa_zz(j))
@@ -294,6 +335,7 @@ subroutine  compute_nonlinear_stress (ii,jj,kk,ispec, Nspr, n_active_surface, &
             surface = surface+ 1  
 
         enddo
+
     endif
 
 
@@ -315,20 +357,23 @@ subroutine  compute_nonlinear_stress (ii,jj,kk,ispec, Nspr, n_active_surface, &
         return
     endif
 
-
-    ! Ed computation
+    ! Ed computation: the matrix that relates deviatoric stress and strain
     Ed    = 0e0_CUSTOM_REAL
     start = 1
 
-    Ed(1,1) = 0.5_CUSTOM_REAL/ Gm0
-    Ed(2,2) = 0.5_CUSTOM_REAL/ Gm0
-    Ed(3,3) = 0.5_CUSTOM_REAL/ Gm0
-    Ed(4,4) = 0.5_CUSTOM_REAL/ Gm0
-    Ed(5,5) = 0.5_CUSTOM_REAL/ Gm0
-    Ed(6,6) = 0.5_CUSTOM_REAL/ Gm0
+
+    ! elastic part 
+    dummy = 0.5_CUSTOM_REAL/ Gm0
+    Ed(1,1) = dummy
+    Ed(2,2) = dummy
+    Ed(3,3) = dummy
+    Ed(4,4) = dummy
+    Ed(5,5) = dummy
+    Ed(6,6) = dummy
 
     if (surface > 0) &
-    call MAT_IWAN_Ematris(start, Nspr, Ed, CNinv, S, Sa_xx, Sa_xy, Sa_zz, Sa_xy, Sa_xz, Sa_yz, F, surface)  
+    call MAT_IWAN_Ematris(start, Nspr, Ed, CNinv, S, Sa_xx, Sa_yy, Sa_zz, Sa_xy, Sa_xz, Sa_yz, F, surface)  
+
 
 
     do j = surface+1,Nspr-1
@@ -339,22 +384,25 @@ subroutine  compute_nonlinear_stress (ii,jj,kk,ispec, Nspr, n_active_surface, &
         if ( (dF(j) >= 0e0_CUSTOM_REAL)  .AND. (F(j) >= R(j)** 2) ) then
             surface = surface+ 1  
             start   = surface
-            call MAT_IWAN_Ematris(start, Nspr, Ed, CNinv, S, Sa_xx, Sa_xy, Sa_zz, Sa_xy, Sa_xz, Sa_yz, F, surface)  
+            call MAT_IWAN_Ematris(start, Nspr, Ed, CNinv, S, Sa_xx, Sa_yy, Sa_zz, Sa_xy, Sa_xz, Sa_yz, F, surface)  
         else
             EXIT
         endif
     enddo 
 
 
+    !print*, 'STEP IV'
     ! Alternative for inversion
     ! solve Ed·x = de (de is used as input/ouput)
     call LUDCMP(Ed, 6, INDX, D, errorflag)
-!     if (errorflag .ne. 0) stop 'not invertible matrix' ! here error call !!!
+!    if (errorflag .ne. 0) stop 'not invertible matrix' ! here error call !!!
+    if (errorflag .ne. 0) print*, '*** not invertible matrix' 
     call LUBKSB(Ed, 6, INDX, de) 
+    
+
+
     dS = de
-
     S = S+ dS    
-
 
     dsigma_xx = dS(1)+ dsigm
     dsigma_yy = dS(2)+ dsigm
@@ -362,6 +410,7 @@ subroutine  compute_nonlinear_stress (ii,jj,kk,ispec, Nspr, n_active_surface, &
     dsigma_xy = dS(3)
     dsigma_xz = dS(4)
     dsigma_yz = dS(5)
+
 
     n_active_surface = max(1, surface)
 
@@ -408,14 +457,18 @@ function MAT_IWAN_surface(S, Sa_xx, Sa_yy, Sa_zz, Sa_xy, Sa_xz, Sa_yz)  result(F
     real(kind=CUSTOM_REAL), intent(inout) :: Sa_xy, Sa_xz, Sa_yz
     real(kind=CUSTOM_REAL) :: F
 
-    ! burdaki 2 katsayilarini KONTROL ET !!!
 
     F = 0.e0_CUSTOM_REAL
-    F = 0.5e0_CUSTOM_REAL* ( (S(1)-Sa_xx ) ** 2+ ( S(2)- Sa_yy )** 2 &
-                  + 2._CUSTOM_REAL* ( S(3)- Sa_xy )** 2  &
-                  + 2._CUSTOM_REAL* ( S(4)- Sa_xz )** 2  &
-                  + 2._CUSTOM_REAL* ( S(5)- Sa_yz )** 2  &
+
+    F = 0.5e0_CUSTOM_REAL* ( (S(1)-Sa_xx )** 2+ ( S(2)- Sa_yy )** 2 &
+                  + 2e0_CUSTOM_REAL* ( S(3)- Sa_xy )** 2  &
+                  + 2e0_CUSTOM_REAL* ( S(4)- Sa_xz )** 2  &
+                  + 2e0_CUSTOM_REAL* ( S(5)- Sa_yz )** 2  &
                   + ( S(6)- Sa_zz )** 2 )
+
+    !!!
+    F = max()
+
 
 end function MAT_IWAN_surface  
 !=====================================================================
@@ -431,12 +484,12 @@ function MAT_IWAN_dsurface(S,Sa_xx,Sa_yy,Sa_zz,Sa_xy,Sa_xz,Sa_yz,de) result(dF)
     real(kind=CUSTOM_REAL), intent(in) :: de(6)
     real(kind=CUSTOM_REAL) :: dF
 
-!     ! burdaki 2 katsayilarini KONTROL ET !!!
     dF = 0e0_CUSTOM_REAL
-    dF = 0.5e0_CUSTOM_REAL* ( (S(1)- Sa_xx )* de(1)+ ( S(2)- Sa_yy )* de(2)+ &
-                  1._CUSTOM_REAL* ( S(3)- Sa_xy )* de(3) + &
-                  1._CUSTOM_REAL* ( S(4)- Sa_xz )* de(4) + &
-                  1._CUSTOM_REAL* ( S(5)- Sa_yz )* de(5) + &
+
+    dF = 0.5e0_CUSTOM_REAL* ( ( S(1)- Sa_xx )* de(1)+ ( S(2)- Sa_yy )* de(2)+ &
+                  2e0_CUSTOM_REAL* ( S(3)- Sa_xy )* de(3) + &
+                  2e0_CUSTOM_REAL* ( S(4)- Sa_xz )* de(4) + &
+                  2e0_CUSTOM_REAL* ( S(5)- Sa_yz )* de(5) + &
                   ( S(6)- Sa_zz )* de(6) )
 
 end function MAT_IWAN_dsurface  

@@ -729,8 +729,7 @@
           ! here to call iwan subroutine 
           ! to get stress values -Elif.
           ! we're already inside i,j,k loop!
-
-
+          
           if (NONLINEAR_SIMULATION  .and. .not. is_CPML(ispec)) then
 
             ! Elasticity test
@@ -738,8 +737,19 @@
             lambdal = lambdalplus2mul - 2e0_CUSTOM_REAL* mul
 
 
-            ! before calling Iwan:
 
+!            call compute_nonlinear_stress(i,j,k,ispec, NSPR, n_active_surface(i,j,k,ispec), &
+!                     S_NL(:,i,j,k,ispec), F_NL(:,i,j,k,ispec), &
+!                     R_NL(:,i,j,k,ispec), CNinv_NL(:,i,j,k,ispec), &
+!                     Sa_NL_xx(:,i,j,k,ispec), &
+!                     Sa_NL_yy(:,i,j,k,ispec), Sa_NL_zz(:,i,j,k,ispec), &
+!                     Sa_NL_xy(:,i,j,k,ispec), Sa_NL_xz(:,i,j,k,ispec), &
+!                     Sa_NL_yz(:,i,j,k,ispec), &
+!                     mul,lambdal,lambdalplus2mul, &
+!                     duxdxl_NL,duydyl_NL,duzdzl_NL, &
+!                     duydyl_plus_duzdzl_NL, duxdxl_plus_duzdzl_NL, duxdxl_plus_duydyl_NL, &
+!                     duxdyl_plus_duydxl_NL, duzdxl_plus_duxdzl_NL, duzdyl_plus_duydzl_NL, &
+!                     dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
 
 
             call compute_nonlinear_stress(i,j,k,ispec, NSPR, n_active_surface(i,j,k,ispec), &
@@ -753,7 +763,12 @@
                      duxdxl_NL,duydyl_NL,duzdzl_NL, &
                      duydyl_plus_duzdzl_NL, duxdxl_plus_duzdzl_NL, duxdxl_plus_duydyl_NL, &
                      duxdyl_plus_duydxl_NL, duzdxl_plus_duxdzl_NL, duzdyl_plus_duydzl_NL, &
+                     duxdyl_NL, duxdzl_NL, duydzl_NL, &
                      dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
+
+
+
+
 
 
 

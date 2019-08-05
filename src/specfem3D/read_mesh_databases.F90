@@ -1066,6 +1066,9 @@
 
   ! Elif Nonlinearity.
   if (NONLINEAR_SIMULATION) then
+
+    NSPR = 50
+
     allocate(sigmastore_xx(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
     if (ier /= 0) call exit_MPI_without_rank('error allocating array 1576')
     allocate(sigmastore_yy(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
@@ -1078,6 +1081,32 @@
     if (ier /= 0) call exit_MPI_without_rank('error allocating array 1580')    
     allocate(sigmastore_yz(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
     if (ier /= 0) call exit_MPI_without_rank('error allocating array 1581')
+
+    allocate(R_NL(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1582')
+    allocate(CNinv_NL(NSPR-1,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1583')
+
+    allocate(n_active_surface(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1584')
+    allocate(F_NL(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1585')
+    allocate(S_NL(6,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1586')
+
+    allocate(Sa_NL_xx(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1587')
+    allocate(Sa_NL_yy(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1588')
+    allocate(Sa_NL_zz(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1589')
+    allocate(Sa_NL_xy(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1590')        
+    allocate(Sa_NL_xz(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1591')
+    allocate(Sa_NL_yz(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1592')
+
     if (ier /= 0) stop 'Error allocating array buffer_send_vector_ext_mesh_s,.. for nonlinearity simulations'
   endif
 

@@ -62,7 +62,11 @@
                         ispec2D_moho_top,ispec2D_moho_bot, &
                         nspec_inner_elastic,nspec_outer_elastic,phase_ispec_inner_elastic, &
                         sigmastore_xx, sigmastore_yy, sigmastore_zz, &
-                        sigmastore_xy, sigmastore_xz, sigmastore_yz
+                        sigmastore_xy, sigmastore_xz, sigmastore_yz, &
+                        NSPR, n_active_surface, S_NL, F_NL, R_NL, CNinv_NL, &
+                        Sa_NL_xx, Sa_NL_yy, Sa_NL_zz, Sa_NL_xy, &
+                        Sa_NL_yz, Sa_NL_xz
+!                        
 
   use pml_par, only: is_CPML,spec_to_CPML,accel_elastic_CPML, &
                      PML_dux_dxl,PML_dux_dyl,PML_dux_dzl,PML_duy_dxl,PML_duy_dyl,PML_duy_dzl, &
@@ -172,12 +176,13 @@
   real(kind=CUSTOM_REAL) duxdxl_NL,duxdyl_NL,duxdzl_NL,duydxl_NL
   real(kind=CUSTOM_REAL) duydyl_NL,duydzl_NL,duzdxl_NL,duzdyl_NL,duzdzl_NL
   double precision :: dsigma_xx,dsigma_yy,dsigma_zz,dsigma_xy,dsigma_xz,dsigma_yz
-
+  real(kind=CUSTOM_REAL) :: duxdxl_plus_duydyl_NL,duxdxl_plus_duzdzl_NL,duydyl_plus_duzdzl_NL
+  real(kind=CUSTOM_REAL) :: duxdyl_plus_duydxl_NL,duzdxl_plus_duxdzl_NL,duzdyl_plus_duydzl_NL
 
 
   ! Elif - Forcing nonlinearity; to be changed later.
-  !NONLINEAR_SIMULATION = .True.
-  NONLINEAR_SIMULATION = .False.
+  NONLINEAR_SIMULATION = .True.
+  !NONLINEAR_SIMULATION = .False.
 
 
 
@@ -626,6 +631,15 @@
               duzdzl_NL = xix_regular * tempz3_NL(i,j,k)
             endif
 
+
+            ! to change later
+            duxdxl_plus_duydyl_NL = duxdxl_NL + duydyl_NL
+            duxdxl_plus_duzdzl_NL = duxdxl_NL + duzdzl_NL
+            duydyl_plus_duzdzl_NL = duydyl_NL + duzdzl_NL
+            duxdyl_plus_duydxl_NL = duxdyl_NL + duydxl_NL
+            duzdxl_plus_duxdzl_NL = duzdxl_NL + duxdzl_NL
+            duzdyl_plus_duydzl_NL = duzdyl_NL + duydzl_NL          
+
           endif
 
 
@@ -711,16 +725,25 @@
             lambdalplus2mul = kappal + FOUR_THIRDS * mul
             lambdal = lambdalplus2mul - 2._CUSTOM_REAL * mul
 
-          duxdyl_plus_duydxl = duxdyl + duydxl
-          duzdxl_plus_duxdzl = duzdxl + duxdzl
-          duzdyl_plus_duydzl = duzdyl + duydzl
-
-
             ! call Iwan routine
-            call compute_nonlinear_stress(mul,lambdal,lambdalplus2mul, &
-                      duxdxl_NL,duydyl_NL,duzdzl_NL, &
-                      duxdyl_NL,duydxl_NL,duzdxl_NL,duxdzl_NL,duzdyl_NL,duydzl_NL, &
-                      dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
+!             call compute_nonlinear_stress(mul,lambdal,lambdalplus2mul, &
+!                       duxdxl_NL,duydyl_NL,duzdzl_NL, &
+!                       duxdyl_NL,duydxl_NL,duzdxl_NL,duxdzl_NL,duzdyl_NL,duydzl_NL, &
+!                       dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
+
+
+            call compute_nonlinear_stress(NSPR, n_active_surface(i,j,k,ispec), &
+                     S_NL(:,i,j,k,ispec), F_NL(:,i,j,k,ispec), &
+                     R_NL(:,i,j,k,ispec), CNinv_NL(:,i,j,k,ispec), &
+                     Sa_NL_xx(:,i,j,k,ispec), Sa_NL_yy(:,i,j,k,ispec), Sa_NL_zz(:,i,j,k,ispec), &
+                     Sa_NL_xy(:,i,j,k,ispec), Sa_NL_xz(:,i,j,k,ispec), Sa_NL_yz(:,i,j,k,ispec), &
+                     mul,lambdal,lambdalplus2mul, &
+                     duxdxl_NL,duydyl_NL,duzdzl_NL, &
+                     duydyl_plus_duzdzl_NL, duxdxl_plus_duzdzl_NL, duxdxl_plus_duydyl_NL, &
+                     duxdyl_plus_duydxl_NL, duzdxl_plus_duxdzl_NL, duzdyl_plus_duydzl_NL, &
+                     duxdyl_NL, duxdzl_NL, duydzl_NL, &
+                     dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
+
 
             ! assign to total stress matrix
             sigmastore_xx(i,j,k,ispec) = sigmastore_xx(i,j,k,ispec)+ dsigma_xx

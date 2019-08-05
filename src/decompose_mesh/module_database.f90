@@ -111,7 +111,7 @@ contains
     integer,            dimension(NGNOD2D,nspec2D_top),   intent(in)  :: nodes_ibelm_top
     integer,            dimension(NGNOD2D,nspec2D_moho),  intent(in)  :: nodes_ibelm_moho
     integer,            dimension(nspec_cpml),            intent(in)  :: cpml_to_spec, cpml_regions
-    double precision,   dimension(16,count_def_mat),      intent(in)  :: mat_prop
+    double precision,   dimension(17,count_def_mat),      intent(in)  :: mat_prop
     character(len=MSL), dimension(6,count_undef_mat),     intent(in)  :: undef_mat_prop
     double precision,   dimension(3,nnodes),              intent(in)  :: nodes_coords
     logical,            dimension(nE),                    intent(in)  :: is_cpml
@@ -154,7 +154,7 @@ contains
     ! write material properties in my partition -----
     write(IIN_database)  count_def_mat,count_undef_mat
     do i=1, count_def_mat
-       write(IIN_database) mat_prop(1:16,i)
+       write(IIN_database) mat_prop(1:17,i)
     enddo
     do i = 1, count_undef_mat
        write(IIN_database) undef_mat_prop(1:6,i)
@@ -319,7 +319,7 @@ contains
     ! write MOHO
     ! optional moho
     loc_nspec2D_moho = 0
-    do i=1,nspec2D_moho
+    do i = 1,nspec2D_moho
        if (ipart(ibelm_moho(i)) == myrank+1) then
           loc_nspec2D_moho = loc_nspec2D_moho + 1
        endif
@@ -337,7 +337,7 @@ contains
        !          we need to have the arg of glob2loc_elmnts start at 0, and thus we use glob2loc_nodes(ibelm_** -1)
 
        ! optional moho
-       do i=1,nspec2D_moho
+       do i = 1,nspec2D_moho
           if (ipart(ibelm_moho(i)) == myrank+1) then
              do inode = 1,NGNOD2D
                 node_loc(inode) = glob2loc_nodes(nodes_ibelm_moho(inode,i))
@@ -471,7 +471,7 @@ contains
     ! deallocate temporary arrays to save memory
     deallocate(nelmnts_by_node, stored_elements, nb_neigh, elmnts_by_node)
 
-    if (myrank == 0) write(27,*) ' END OF ADJACY TABLE COMPUTATION'
+    if (myrank == 0) write(27,*) ' END OF ADJACENCY TABLE COMPUTATION'
 
   end subroutine compute_adjcy_table
 

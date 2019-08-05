@@ -121,12 +121,12 @@ program xdecompose_mesh_mpi
   call send_partition_mesh_to_all(myrank, ipart, npartX*npartY*npartZ)
   call send_mesh_to_all(myrank)
 
-  ! 4/ write partitionned mesh in one file per proc
+  ! 4/ write partitioned mesh in one file per proc
   call prepare_database(myrank, elmnts, nspec)
   call write_database(myrank, ipart, elmnts, nodes_coords, elmnts_glob,  mat, mat_prop, undef_mat_prop, &
        count_def_mat, count_undef_mat, ibelm_xmin, ibelm_xmax, ibelm_ymin, ibelm_ymax, &
        ibelm_bottom, ibelm_top, nodes_ibelm_xmin, nodes_ibelm_xmax, nodes_ibelm_ymin, nodes_ibelm_ymax, &
-       nodes_ibelm_bottom, nodes_ibelm_top, cpml_to_spec, cpml_regions, is_cpml, ibelm_moho, nodes_ibelm_moho, &
+       nodes_ibelm_bottom, nodes_ibelm_top, cpml_to_spec, cpml_regions, is_CPML, ibelm_moho, nodes_ibelm_moho, &
        nspec_glob, nnodes, nspec2D_xmin, nspec2D_xmax,nspec2D_ymin, &
        nspec2D_ymax, nspec2D_bottom, nspec2D_top, nspec_cpml, nspec2D_moho)
 
@@ -410,8 +410,8 @@ end subroutine send_partition_mesh_to_all
 !
 !
 ! send whole arrays from master to other
-! (it's small arrays that not need to be distributed
-! execpt for elmnts_glob)
+! (it is small arrays that do not need to be distributed
+! except for elmnts_glob)
 !
 !
 !-------------------------------------------------------
@@ -439,7 +439,7 @@ subroutine send_mesh_to_all(myrank)
      if (ier /= 0) call exit_MPI_without_rank('error allocating array 20')
      if (ier /= 0) stop 'Error allocating array num_material'
 
-     allocate(mat_prop(16,count_def_mat),stat=ier)
+     allocate(mat_prop(17,count_def_mat),stat=ier)
      if (ier /= 0) call exit_MPI_without_rank('error allocating array 21')
      if (ier /= 0) stop 'Error allocating array mat_prop'
 
@@ -510,7 +510,7 @@ subroutine send_mesh_to_all(myrank)
 
   endif
 
-  call bcast_all_dp(mat_prop,16*count_def_mat)
+  call bcast_all_dp(mat_prop,17*count_def_mat)
   call bcast_all_i(elmnts_glob, NGNOD*nspec_glob)
   call bcast_all_i(mat, 2*nspec_glob)
   call bcast_all_i(num_material, nspec_glob)
@@ -531,7 +531,7 @@ subroutine send_mesh_to_all(myrank)
   call bcast_all_i(cpml_to_spec, nspec_cpml)
   call bcast_all_i(cpml_regions, nspec_cpml)
   call bcast_all_ch_array(undef_mat_prop,6*count_undef_mat,MAX_STRING_LEN)
-  call bcast_all_l_array(is_cpml, nspec_glob)
+  call bcast_all_l_array(is_CPML, nspec_glob)
 
 
 end subroutine send_mesh_to_all

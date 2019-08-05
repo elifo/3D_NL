@@ -132,8 +132,7 @@ inverse_problem_for_model_OBJECTS += \
 	$O/compute_coupling_poroelastic_ac.spec.o \
 	$O/compute_coupling_poroelastic_el.spec.o \
 	$O/compute_forces_acoustic_calling_routine.spec.o \
-	$O/compute_forces_acoustic_NGLL5_fast.spec.o \
-	$O/compute_forces_acoustic_NGLLnot5_generic_slow.spec.o \
+	$O/compute_forces_acoustic.spec.o \
 	$O/compute_forces_viscoelastic_calling_routine.spec.o \
 	$O/compute_forces_viscoelastic.spec.o \
 	$O/compute_element_att_memory.spec.o \
@@ -168,12 +167,11 @@ inverse_problem_for_model_OBJECTS += \
 	$O/locate_source.spec.o \
 	$O/make_gravity.spec.o \
 	$O/noise_tomography.spec.o \
-	$O/nonlinear_solver_iwan.spec.o \
 	$O/pml_allocate_arrays.spec.o \
 	$O/pml_output_VTKs.spec.o \
 	$O/pml_compute_accel_contribution.spec.o \
 	$O/pml_compute_memory_variables.spec.o \
-	$O/pml_par.spec.o \
+	$O/pml_par.spec_module.o \
 	$O/prepare_attenuation.spec.o \
 	$O/prepare_gpu.spec.o \
 	$O/prepare_gravity.spec.o \

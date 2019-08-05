@@ -41,6 +41,11 @@
   integer :: ier
   character(len=MAX_STRING_LEN) :: database_name
 
+  ! user output
+  if (myrank == 0) then
+    write(IMAIN,*) "Reading mesh databases..."
+    call flush_IMAIN()
+  endif
 
   ! sets file name
   call create_name_database(prname,myrank,LOCAL_PATH)
@@ -470,7 +475,6 @@
   allocate(is_CPML(NSPEC_AB),stat=ier)
   if (ier /= 0) call exit_MPI_without_rank('error allocating array 1504')
   if (ier /= 0) stop 'Error allocating array is_CPML'
-
 ! make sure there are no PMLs by default,
 ! and then below if NSPEC_CPML > 0 we will read the real flags for this mesh from the disk
   is_CPML(:) = .false.
@@ -1056,59 +1060,12 @@
     if (ier /= 0) stop 'Error allocating array buffer_send_vector_ext_mesh_s,.. for poroelastic simulations'
   endif
 
-
-
-! to be checked later -Elif.
-  !if (NONLINEARITY_SIMULATION) then
-  if (ELASTIC_SIMULATION) then
-
-    ! spring number 
-    ! later read this from input file(?).
-    NSPR = 50
-
-    allocate(sigmastore_xx(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1576')
-    allocate(sigmastore_yy(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1577')    
-    allocate(sigmastore_zz(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1578')    
-    allocate(sigmastore_xy(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1579')   
-    allocate(sigmastore_xz(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1580')    
-    allocate(sigmastore_yz(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1581')
-
-    allocate(n_active_surface(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1582')
-    allocate(F_NL(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1583')
-    allocate(S_NL(6,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1584')
-    allocate(R_NL(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1585')
-    allocate(CNinv_NL(NSPR-1,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1586')
-
-    allocate(Sa_NL_xx(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1587')
-    allocate(Sa_NL_yy(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1588')
-    allocate(Sa_NL_zz(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1589')
-    allocate(Sa_NL_xy(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1590')        
-    allocate(Sa_NL_xz(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1591')
-    allocate(Sa_NL_yz(NSPR,NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
-    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1592')
-    if (ier /= 0) stop 'Error allocating array buffer_send_vector_ext_mesh_s,.. for nonlinearity simulations'
+  ! user output
+  if (myrank == 0) then
+    write(IMAIN,*) "done"
+    write(IMAIN,*)
+    call flush_IMAIN()
   endif
-
-
-
-
-
 
   end subroutine read_mesh_databases
 

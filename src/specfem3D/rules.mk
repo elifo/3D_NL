@@ -42,10 +42,9 @@ specfem3D_TARGETS = \
 	$(EMPTY_MACRO)
 
 
-# Elif- added object file name for new file
 specfem3D_OBJECTS = \
 	$O/specfem3D_par.spec_module.o \
-        $O/asdf_data.spec_module.o \
+	$O/asdf_data.spec_module.o \
 	$O/assemble_MPI_vector.spec.o \
 	$O/check_stability.spec.o \
 	$O/comp_source_time_function.spec.o \
@@ -62,8 +61,7 @@ specfem3D_OBJECTS = \
 	$O/compute_coupling_poroelastic_ac.spec.o \
 	$O/compute_coupling_poroelastic_el.spec.o \
 	$O/compute_forces_acoustic_calling_routine.spec.o \
-	$O/compute_forces_acoustic_NGLL5_fast.spec.o \
-	$O/compute_forces_acoustic_NGLLnot5_generic_slow.spec.o \
+	$O/compute_forces_acoustic.spec.o \
 	$O/compute_forces_viscoelastic_calling_routine.spec.o \
 	$O/compute_forces_viscoelastic.spec.o \
 	$O/compute_element_att_memory.spec.o \
@@ -99,12 +97,11 @@ specfem3D_OBJECTS = \
 	$O/locate_source.spec.o \
 	$O/make_gravity.spec.o \
 	$O/noise_tomography.spec.o \
-	$O/nonlinear_solver_iwan.spec.o \
 	$O/pml_allocate_arrays.spec.o \
 	$O/pml_output_VTKs.spec.o \
 	$O/pml_compute_accel_contribution.spec.o \
 	$O/pml_compute_memory_variables.spec.o \
-	$O/pml_par.spec.o \
+	$O/pml_par.spec_module.o \
 	$O/prepare_attenuation.spec.o \
 	$O/prepare_gpu.spec.o \
 	$O/prepare_gravity.spec.o \
@@ -170,7 +167,6 @@ specfem3D_MODULES = \
 	$(FC_MODDIR)/fault_solver_kinematic.$(FC_MODEXT) \
 	$(FC_MODDIR)/gravity_perturbation.$(FC_MODEXT) \
 	$(FC_MODDIR)/image_pnm_par.$(FC_MODEXT) \
-	$(FC_MODDIR)/nonlinear_solver_iwan.$(FC_MODEXT) \
 	$(FC_MODDIR)/pml_par.$(FC_MODEXT) \
 	$(FC_MODDIR)/specfem_par.$(FC_MODEXT) \
 	$(FC_MODDIR)/specfem_par_acoustic.$(FC_MODEXT) \
@@ -192,8 +188,6 @@ specfem3D_SHARED_OBJECTS += $(COND_MPI_OBJECTS)
 ###
 specfem3D_SHARED_OBJECTS += $(COND_OMP_OBJECTS)
 
-
-# ask this part to Pablo, -Elif.
 ###
 ### CUDA
 ###
@@ -357,28 +351,13 @@ endif
 # Version file
 $O/initialize_simulation.spec.o: ${SETUP}/version.fh
 
-## pml
-$O/compute_coupling_acoustic_el.spec.o: $O/pml_par.spec.o
-$O/compute_coupling_viscoelastic_ac.spec.o: $O/pml_par.spec.o 
-$O/compute_forces_acoustic_calling_routine.spec.o: $O/pml_par.spec.o
-$O/compute_forces_acoustic_NGLL5_fast.spec.o: $O/pml_par.spec.o
-$O/compute_forces_acoustic_NGLLnot5_generic_slow.spec.o: $O/pml_par.spec.o
-$O/compute_energy.spec.o: $O/pml_par.spec.o
-$O/pml_allocate_arrays.spec.o: $O/pml_par.spec.o
-$O/pml_compute_accel_contribution.spec.o: $O/pml_par.spec.o
-$O/pml_compute_memory_variables.spec.o: $O/pml_par.spec.o
-$O/pml_output_VTKs.spec.o: $O/pml_par.spec.o
-$O/read_mesh_databases.spec.o: $O/pml_par.spec.o
-$O/update_displacement_scheme.spec.o: $O/pml_par.spec.o
-
-# Elif- mentioned the dependecy of new file here.
 ## fault
 $O/fault_solver_dynamic.spec.o: $O/fault_solver_common.spec.o
 $O/fault_solver_kinematic.spec.o: $O/fault_solver_common.spec.o
-$O/compute_forces_viscoelastic.spec.o: $O/pml_par.spec.o $O/fault_solver_dynamic.spec.o $O/nonlinear_solver_iwan.spec.o
-$O/compute_forces_viscoelastic_calling_routine.spec.o: $O/pml_par.spec.o $O/fault_solver_dynamic.spec.o $O/fault_solver_kinematic.spec.o
+$O/compute_forces_viscoelastic.spec.o: $O/fault_solver_dynamic.spec.o
+$O/compute_forces_viscoelastic_calling_routine.spec.o: $O/fault_solver_dynamic.spec.o $O/fault_solver_kinematic.spec.o
 
-$O/prepare_timerun.spec.o: $O/pml_par.spec.o $O/fault_solver_dynamic.spec.o $O/fault_solver_kinematic.spec.o
+$O/prepare_timerun.spec.o: $O/fault_solver_dynamic.spec.o $O/fault_solver_kinematic.spec.o
 $O/prepare_gpu.spec.o: $O/fault_solver_dynamic.spec.o $O/fault_solver_kinematic.spec.o
 
 ## gravity
@@ -386,12 +365,10 @@ $O/iterate_time.spec.o: $O/gravity_perturbation.spec.o
 $O/prepare_gravity.spec.o: $O/gravity_perturbation.spec.o
 
 ## adios
-$O/read_forward_arrays_adios.spec_adios.o: $O/pml_par.spec.o
-$O/read_mesh_databases_adios.spec_adios.o: $O/pml_par.spec.o
 $O/initialize_simulation.spec.o: $(adios_specfem3D_PREOBJECTS)
 $O/save_kernels_adios.spec_adios.o: $(adios_specfem3D_PREOBJECTS)
-$O/save_forward_arrays_adios.spec_adios.o: $O/pml_par.spec.o $(adios_specfem3D_PREOBJECTS)
-$O/finalize_simulation.spec.o: $O/pml_par.spec.o $O/gravity_perturbation.spec.o $(adios_specfem3D_PREOBJECTS)
+$O/save_forward_arrays_adios.spec_adios.o: $(adios_specfem3D_PREOBJECTS)
+$O/finalize_simulation.spec.o: $O/gravity_perturbation.spec.o $(adios_specfem3D_PREOBJECTS)
 $O/specfem3D_adios_stubs.spec_noadios.o: $O/adios_manager_stubs.shared_noadios.o
 $O/adios_helpers.shared_adios.o: \
 	$O/adios_helpers_definitions.shared_adios_module.o \
@@ -416,10 +393,10 @@ $O/%.spec_module.o: $S/%.F90 $O/shared_par.shared_module.o
 	${FCCOMPILE_CHECK} ${FCFLAGS_f90} -c -o $@ $<
 
 
-$O/%.spec.o: $S/%.f90 $O/specfem3D_par.spec_module.o
+$O/%.spec.o: $S/%.f90 $O/specfem3D_par.spec_module.o $O/pml_par.spec_module.o
 	${FCCOMPILE_CHECK} ${FCFLAGS_f90} -c -o $@ $<
 
-$O/%.spec.o: $S/%.F90 $O/specfem3D_par.spec_module.o
+$O/%.spec.o: $S/%.F90 $O/specfem3D_par.spec_module.o $O/pml_par.spec_module.o
 	${FCCOMPILE_CHECK} ${FCFLAGS_f90} -c -o $@ $<
 
 ###
@@ -433,16 +410,16 @@ $(cuda_specfem3D_DEVICE_OBJ): $(cuda_OBJECTS)
 ### ADIOS compilation
 ###
 
-$O/%.spec_adios.o: $S/%.F90 $O/specfem3D_par.spec_module.o
+$O/%.spec_adios.o: $S/%.F90 $O/specfem3D_par.spec_module.o $O/pml_par.spec_module.o
 	${FCCOMPILE_CHECK} ${FCFLAGS_f90} -c -o $@ $<
 
-$O/%.spec_adios.o: $S/%.f90 $O/specfem3D_par.spec_module.o
+$O/%.spec_adios.o: $S/%.f90 $O/specfem3D_par.spec_module.o $O/pml_par.spec_module.o
 	${FCCOMPILE_CHECK} ${FCFLAGS_f90} -c -o $@ $<
 
-$O/%.spec_noadios.o: $S/%.F90 $O/specfem3D_par.spec_module.o
+$O/%.spec_noadios.o: $S/%.F90 $O/specfem3D_par.spec_module.o $O/pml_par.spec_module.o
 	${FCCOMPILE_CHECK} ${FCFLAGS_f90} -c -o $@ $<
 
-$O/%.spec_noadios.o: $S/%.f90 $O/specfem3D_par.spec_module.o
+$O/%.spec_noadios.o: $S/%.f90 $O/specfem3D_par.spec_module.o $O/pml_par.spec_module.o
 	${FCCOMPILE_CHECK} ${FCFLAGS_f90} -c -o $@ $<
 
 

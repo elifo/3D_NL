@@ -40,8 +40,6 @@
 
   use fault_solver_dynamic, only: Kelvin_Voigt_eta
 
-  use nonlinear_solver_iwan, only: compute_nonlinear_stress
-
   use specfem_par, only: SAVE_MOHO_MESH,USE_LDDRK,xix,xiy,xiz,etax,etay,etaz,gammax,gammay,gammaz, &
                         NSPEC_AB,NGLOB_AB,hprime_xxT,hprime_yyT,hprime_zzT, &
                         hprimewgll_xx,hprimewgll_yy,hprimewgll_zz, &
@@ -60,14 +58,7 @@
                         factor_common_kappa,COMPUTE_AND_STORE_STRAIN,NSPEC_STRAIN_ONLY, &
                         dsdx_top,dsdx_bot, &
                         ispec2D_moho_top,ispec2D_moho_bot, &
-                        nspec_inner_elastic,nspec_outer_elastic,phase_ispec_inner_elastic, &
-                        sigmastore_xx, sigmastore_yy, sigmastore_zz, &
-                        sigmastore_xy, sigmastore_xz, sigmastore_yz, &
-                        NSPR, n_active_surface, S_NL, F_NL, R_NL, CNinv_NL, &
-                        Sa_NL_xx, Sa_NL_yy, Sa_NL_zz, Sa_NL_xy, &
-                        Sa_NL_yz, Sa_NL_xz
-!
-
+                        nspec_inner_elastic,nspec_outer_elastic,phase_ispec_inner_elastic
 
   use pml_par, only: is_CPML,spec_to_CPML,accel_elastic_CPML, &
                      PML_dux_dxl,PML_dux_dyl,PML_dux_dzl,PML_duy_dxl,PML_duy_dyl,PML_duy_dzl, &
@@ -166,34 +157,6 @@
             tempy1_att_new,tempy2_att_new,tempy3_att_new, &
             tempz1_att_new,tempz2_att_new,tempz3_att_new
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: zero_array
-
-
-  ! Elif - for the moment
-  ! I force nonlinearity everywhere
-  logical :: NONLINEAR_SIMULATION
-
-
-  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: dummy_x_loc_NL, dummy_y_loc_NL, dummy_z_loc_NL
-  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: tempx1_NL,tempx2_NL,tempx3_NL,&
-                            tempy1_NL,tempy2_NL,tempy3_NL,&
-                            tempz1_NL,tempz2_NL,tempz3_NL
-  real(kind=CUSTOM_REAL) :: duxdxl_NL,duxdyl_NL,duxdzl_NL, &
-                            duydxl_NL,duydyl_NL,duydzl_NL, &
-                duzdxl_NL,duzdyl_NL,duzdzl_NL
-  real(kind=CUSTOM_REAL) :: dsigma_xx,dsigma_yy,dsigma_zz, &
-                            dsigma_xy,dsigma_xz,dsigma_yz
-  real(kind=CUSTOM_REAL) :: duxdxl_plus_duydyl_NL,duxdxl_plus_duzdzl_NL,duydyl_plus_duzdzl_NL
-  real(kind=CUSTOM_REAL) :: duxdyl_plus_duydxl_NL,duzdxl_plus_duxdzl_NL,duzdyl_plus_duydzl_NL
-
-
-  ! Forcing NL -Elif
-  ! instead of this, I should associate NL with elements:
-  ! like is_pml(ispec), I can use is_nonlinear(ispec).
-  NONLINEAR_SIMULATION = .true.        
-
-
-
-
 
   ! choses inner/outer elements
   if (iphase == 1) then
@@ -295,23 +258,6 @@
           enddo
     endif
 
-
-    ! Elif - to compute strain increment.
-    if (NONLINEAR_SIMULATION  .and. .not. is_CPML(ispec)) then
-       do k=1,NGLLZ
-        do j=1,NGLLY
-          do i=1,NGLLX
-            iglob = ibool(i,j,k,ispec)
-            dummy_x_loc_NL(i,j,k) = deltat* veloc(1,iglob)
-            dummy_y_loc_NL(i,j,k) = deltat* veloc(2,iglob)
-            dummy_z_loc_NL(i,j,k) = deltat* veloc(3,iglob)
-          enddo
-        enddo
-      enddo     
-    endif
-
-
-
     !------------------------------------------------------------------------------
     !---------------------computation of strain in element-------------------------
     !------------------------------------------------------------------------------
@@ -349,21 +295,6 @@
                      dummyx_loc_att,dummyy_loc_att,dummyz_loc_att, &
                      hprime_xxT,hprime_yyT,hprime_zzT)
     endif
-
-
-
-    ! by using velocity values
-    ! to get strain rate -Elif.
-    if (NONLINEAR_SIMULATION .and. .not. is_CPML(ispec)) then 
-      call compute_strain_in_element( &
-                   tempx1_NL,tempx2_NL,tempx3_NL,zero_array,zero_array,zero_array, &
-                   tempy1_NL,tempy2_NL,tempy3_NL,zero_array,zero_array,zero_array, &
-                   tempz1_NL,tempz2_NL,tempz3_NL,zero_array,zero_array,zero_array, &
-                   dummy_x_loc_NL,dummy_y_loc_NL,dummy_z_loc_NL, &
-                   hprime_xxT,hprime_yyT,hprime_zzT)
-    endif
-
-
 
     ispec_irreg = irregular_element_number(ispec)
     if (ispec_irreg == 0) jacobianl = jacobian_regular
@@ -499,6 +430,7 @@
                   PML_duz_dyl_new(i,j,k) =  xix_regular * tempz2_att_new(i,j,k)
                   PML_duz_dzl_new(i,j,k) =  xix_regular * tempz3_att_new(i,j,k)
                 endif
+
               endif
 
               if (COMPUTE_AND_STORE_STRAIN) then
@@ -609,50 +541,6 @@
             endif
           endif
 
-
-          ! Getting strain rates
-          if (NONLINEAR_SIMULATION .and. .not. is_CPML(ispec)) then
-
-            if (ispec_irreg /= 0) then !irregular element
-
-              duxdxl_NL = xixl*tempx1_NL(i,j,k) + etaxl*tempx2_NL(i,j,k) + gammaxl*tempx3_NL(i,j,k)
-              duxdyl_NL = xiyl*tempx1_NL(i,j,k) + etayl*tempx2_NL(i,j,k) + gammayl*tempx3_NL(i,j,k)
-              duxdzl_NL = xizl*tempx1_NL(i,j,k) + etazl*tempx2_NL(i,j,k) + gammazl*tempx3_NL(i,j,k)
-
-              duydxl_NL = xixl*tempy1_NL(i,j,k) + etaxl*tempy2_NL(i,j,k) + gammaxl*tempy3_NL(i,j,k)
-              duydyl_NL = xiyl*tempy1_NL(i,j,k) + etayl*tempy2_NL(i,j,k) + gammayl*tempy3_NL(i,j,k)
-              duydzl_NL = xizl*tempy1_NL(i,j,k) + etazl*tempy2_NL(i,j,k) + gammazl*tempy3_NL(i,j,k)
-
-              duzdxl_NL = xixl*tempz1_NL(i,j,k) + etaxl*tempz2_NL(i,j,k) + gammaxl*tempz3_NL(i,j,k)
-              duzdyl_NL = xiyl*tempz1_NL(i,j,k) + etayl*tempz2_NL(i,j,k) + gammayl*tempz3_NL(i,j,k)
-              duzdzl_NL = xizl*tempz1_NL(i,j,k) + etazl*tempz2_NL(i,j,k) + gammazl*tempz3_NL(i,j,k)
-
-            else !regular element
-              duxdxl_NL = xix_regular*tempx1_NL(i,j,k)
-              duxdyl_NL = xix_regular*tempx2_NL(i,j,k)
-              duxdzl_NL = xix_regular*tempx3_NL(i,j,k)
-
-              duydxl_NL = xix_regular*tempy1_NL(i,j,k)
-              duydyl_NL = xix_regular*tempy2_NL(i,j,k)
-              duydzl_NL = xix_regular*tempy3_NL(i,j,k)
-
-              duzdxl_NL = xix_regular*tempz1_NL(i,j,k)
-              duzdyl_NL = xix_regular*tempz2_NL(i,j,k)
-              duzdzl_NL = xix_regular*tempz3_NL(i,j,k)
-            endif
-
-            ! Elif - to decide later if necessary;
-            ! now only for elasticity test.
-            ! precompute some sums to save CPU time
-            duxdxl_plus_duydyl_NL = duxdxl_NL + duydyl_NL
-            duxdxl_plus_duzdzl_NL = duxdxl_NL + duzdzl_NL
-            duydyl_plus_duzdzl_NL = duydyl_NL + duzdzl_NL
-            duxdyl_plus_duydxl_NL = duxdyl_NL + duydxl_NL
-            duzdxl_plus_duxdzl_NL = duzdxl_NL + duxdzl_NL
-            duzdyl_plus_duydzl_NL = duzdyl_NL + duydzl_NL
-           endif
-
-
           kappal = kappastore(i,j,k,ispec)
           mul = mustore(i,j,k,ispec)
 
@@ -725,115 +613,47 @@
 
           endif
 
+            if (.not. is_CPML(ispec)) then
 
-          ! here to call iwan subroutine 
-          ! to get stress values -Elif.
-          ! we're already inside i,j,k loop!
-          
-          if (NONLINEAR_SIMULATION  .and. .not. is_CPML(ispec)) then
+              ! define symmetric components of sigma
+              sigma_yx = sigma_xy
+              sigma_zx = sigma_xz
+              sigma_zy = sigma_yz
+              if (ispec_irreg /= 0) then ! irregular element
 
-            ! Elasticity test
-            lambdalplus2mul = kappal + FOUR_THIRDS * mul
-            lambdal = lambdalplus2mul - 2e0_CUSTOM_REAL* mul
+                ! form dot product with test vector, non-symmetric form (which is useful in the case of PML)
+                tempx1(i,j,k) = jacobianl * (sigma_xx * xixl + sigma_yx * xiyl + sigma_zx * xizl) ! this goes to accel_x
+                tempy1(i,j,k) = jacobianl * (sigma_xy * xixl + sigma_yy * xiyl + sigma_zy * xizl) ! this goes to accel_y
+                tempz1(i,j,k) = jacobianl * (sigma_xz * xixl + sigma_yz * xiyl + sigma_zz * xizl) ! this goes to accel_z
 
+                tempx2(i,j,k) = jacobianl * (sigma_xx * etaxl + sigma_yx * etayl + sigma_zx * etazl) ! this goes to accel_x
+                tempy2(i,j,k) = jacobianl * (sigma_xy * etaxl + sigma_yy * etayl + sigma_zy * etazl) ! this goes to accel_y
+                tempz2(i,j,k) = jacobianl * (sigma_xz * etaxl + sigma_yz * etayl + sigma_zz * etazl) ! this goes to accel_z
 
+                tempx3(i,j,k) = jacobianl * (sigma_xx * gammaxl + sigma_yx * gammayl + sigma_zx * gammazl) ! this goes to accel_x
+                tempy3(i,j,k) = jacobianl * (sigma_xy * gammaxl + sigma_yy * gammayl + sigma_zy * gammazl) ! this goes to accel_y
+                tempz3(i,j,k) = jacobianl * (sigma_xz * gammaxl + sigma_yz * gammayl + sigma_zz * gammazl) ! this goes to accel_z
+              else !regular element
+             ! form dot product with test vector, non-symmetric form (which is useful in the case of PML)
+                tempx1(i,j,k) = jacobianl * sigma_xx * xix_regular ! this goes to accel_x
+                tempy1(i,j,k) = jacobianl * sigma_xy * xix_regular ! this goes to accel_y
+                tempz1(i,j,k) = jacobianl * sigma_xz * xix_regular ! this goes to accel_z
 
-!            call compute_nonlinear_stress(i,j,k,ispec, NSPR, n_active_surface(i,j,k,ispec), &
-!                     S_NL(:,i,j,k,ispec), F_NL(:,i,j,k,ispec), &
-!                     R_NL(:,i,j,k,ispec), CNinv_NL(:,i,j,k,ispec), &
-!                     Sa_NL_xx(:,i,j,k,ispec), &
-!                     Sa_NL_yy(:,i,j,k,ispec), Sa_NL_zz(:,i,j,k,ispec), &
-!                     Sa_NL_xy(:,i,j,k,ispec), Sa_NL_xz(:,i,j,k,ispec), &
-!                     Sa_NL_yz(:,i,j,k,ispec), &
-!                     mul,lambdal,lambdalplus2mul, &
-!                     duxdxl_NL,duydyl_NL,duzdzl_NL, &
-!                     duydyl_plus_duzdzl_NL, duxdxl_plus_duzdzl_NL, duxdxl_plus_duydyl_NL, &
-!                     duxdyl_plus_duydxl_NL, duzdxl_plus_duxdzl_NL, duzdyl_plus_duydzl_NL, &
-!                     dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
+                tempx2(i,j,k) = jacobianl * sigma_yx * xix_regular ! this goes to accel_x
+                tempy2(i,j,k) = jacobianl * sigma_yy * xix_regular ! this goes to accel_y
+                tempz2(i,j,k) = jacobianl * sigma_yz * xix_regular ! this goes to accel_z
 
+                tempx3(i,j,k) = jacobianl * sigma_zx * xix_regular ! this goes to accel_x
+                tempy3(i,j,k) = jacobianl * sigma_zy * xix_regular ! this goes to accel_y
+                tempz3(i,j,k) = jacobianl * sigma_zz * xix_regular ! this goes to accel_z
 
-            call compute_nonlinear_stress(i,j,k,ispec, NSPR, n_active_surface(i,j,k,ispec), &
-                     S_NL(:,i,j,k,ispec), F_NL(:,i,j,k,ispec), &
-                     R_NL(:,i,j,k,ispec), CNinv_NL(:,i,j,k,ispec), &
-                     Sa_NL_xx(:,i,j,k,ispec), &
-                     Sa_NL_yy(:,i,j,k,ispec), Sa_NL_zz(:,i,j,k,ispec), &
-                     Sa_NL_xy(:,i,j,k,ispec), Sa_NL_xz(:,i,j,k,ispec), &
-                     Sa_NL_yz(:,i,j,k,ispec), &
-                     mul,lambdal,lambdalplus2mul, &
-                     duxdxl_NL,duydyl_NL,duzdzl_NL, &
-                     duydyl_plus_duzdzl_NL, duxdxl_plus_duzdzl_NL, duxdxl_plus_duydyl_NL, &
-                     duxdyl_plus_duydxl_NL, duzdxl_plus_duxdzl_NL, duzdyl_plus_duydzl_NL, &
-                     duxdyl_NL, duxdzl_NL, duydzl_NL, &
-                     dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
+              endif
 
-
-
-
-
-
-
-           ! assign to total stress matrix
-            sigmastore_xx(i,j,k,ispec) = sigmastore_xx(i,j,k,ispec)+ dsigma_xx
-            sigmastore_yy(i,j,k,ispec) = sigmastore_yy(i,j,k,ispec)+ dsigma_yy
-            sigmastore_zz(i,j,k,ispec) = sigmastore_zz(i,j,k,ispec)+ dsigma_zz
-            sigmastore_xy(i,j,k,ispec) = sigmastore_xy(i,j,k,ispec)+ dsigma_xy
-            sigmastore_xz(i,j,k,ispec) = sigmastore_xz(i,j,k,ispec)+ dsigma_xz
-            sigmastore_yz(i,j,k,ispec) = sigmastore_yz(i,j,k,ispec)+ dsigma_yz
-
-            ! overwriting
-            sigma_xx = sigmastore_xx(i,j,k,ispec)
-            sigma_yy = sigmastore_yy(i,j,k,ispec)
-            sigma_zz = sigmastore_zz(i,j,k,ispec)
-            sigma_xy = sigmastore_xy(i,j,k,ispec)
-            sigma_xz = sigmastore_xz(i,j,k,ispec)
-            sigma_yz = sigmastore_yz(i,j,k,ispec)
-
-          endif
-
-          if (.not. is_CPML(ispec)) then
-            ! define symmetric components of sigma
-            sigma_yx = sigma_xy
-            sigma_zx = sigma_xz
-            sigma_zy = sigma_yz
-            if (ispec_irreg /= 0) then ! irregular element
-
-              ! form dot product with test vector, non-symmetric form (which is useful in the case of PML)
-              tempx1(i,j,k) = jacobianl * (sigma_xx * xixl + sigma_yx * xiyl + sigma_zx * xizl) ! this goes to accel_x
-              tempy1(i,j,k) = jacobianl * (sigma_xy * xixl + sigma_yy * xiyl + sigma_zy * xizl) ! this goes to accel_y
-              tempz1(i,j,k) = jacobianl * (sigma_xz * xixl + sigma_yz * xiyl + sigma_zz * xizl) ! this goes to accel_z
-
-              tempx2(i,j,k) = jacobianl * (sigma_xx * etaxl + sigma_yx * etayl + sigma_zx * etazl) ! this goes to accel_x
-              tempy2(i,j,k) = jacobianl * (sigma_xy * etaxl + sigma_yy * etayl + sigma_zy * etazl) ! this goes to accel_y
-              tempz2(i,j,k) = jacobianl * (sigma_xz * etaxl + sigma_yz * etayl + sigma_zz * etazl) ! this goes to accel_z
-
-              tempx3(i,j,k) = jacobianl * (sigma_xx * gammaxl + sigma_yx * gammayl + sigma_zx * gammazl) ! this goes to accel_x
-              tempy3(i,j,k) = jacobianl * (sigma_xy * gammaxl + sigma_yy * gammayl + sigma_zy * gammazl) ! this goes to accel_y
-              tempz3(i,j,k) = jacobianl * (sigma_xz * gammaxl + sigma_yz * gammayl + sigma_zz * gammazl) ! this goes to accel_z
-            else !regular element
-           ! form dot product with test vector, non-symmetric form (which is useful in the case of PML)
-              tempx1(i,j,k) = jacobianl * sigma_xx * xix_regular ! this goes to accel_x
-              tempy1(i,j,k) = jacobianl * sigma_xy * xix_regular ! this goes to accel_y
-              tempz1(i,j,k) = jacobianl * sigma_xz * xix_regular ! this goes to accel_z
-
-              tempx2(i,j,k) = jacobianl * sigma_yx * xix_regular ! this goes to accel_x
-              tempy2(i,j,k) = jacobianl * sigma_yy * xix_regular ! this goes to accel_y
-              tempz2(i,j,k) = jacobianl * sigma_yz * xix_regular ! this goes to accel_z
-
-              tempx3(i,j,k) = jacobianl * sigma_zx * xix_regular ! this goes to accel_x
-              tempy3(i,j,k) = jacobianl * sigma_zy * xix_regular ! this goes to accel_y
-              tempz3(i,j,k) = jacobianl * sigma_zz * xix_regular ! this goes to accel_z
             endif
-          endif
 
         enddo ! of the triple loop on i,j,k
       enddo
     enddo
-
-
-    ! Elif.
-    ! Stress computation is done.
-    ! Below is the force computation.
-
 
     if (is_CPML(ispec) .and. .not. backward_simulation) then
         ! In backward_simulation involved in SIMULATION_TYPE == 3,

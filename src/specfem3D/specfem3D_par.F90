@@ -413,6 +413,14 @@ module specfem_par_elastic
     b_R_trace_lddrk,b_R_xx_lddrk,b_R_yy_lddrk,b_R_xy_lddrk,b_R_xz_lddrk,b_R_yz_lddrk
 
 
+  ! Elif - Nonlinearity
+  double precision, dimension(:,:,:,:), allocatable :: sigmastore_xx,sigmastore_yy,sigmastore_zz, &
+                                        sigmastore_xy, sigmastore_xz, sigmastore_yz
+
+
+
+
+
 end module specfem_par_elastic
 
 !=====================================================================

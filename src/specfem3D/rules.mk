@@ -97,6 +97,7 @@ specfem3D_OBJECTS = \
 	$O/locate_source.spec.o \
 	$O/make_gravity.spec.o \
 	$O/noise_tomography.spec.o \
+	$O/nonlinear_solver_iwan.spec.o \
 	$O/pml_allocate_arrays.spec.o \
 	$O/pml_output_VTKs.spec.o \
 	$O/pml_compute_accel_contribution.spec.o \
@@ -167,6 +168,7 @@ specfem3D_MODULES = \
 	$(FC_MODDIR)/fault_solver_kinematic.$(FC_MODEXT) \
 	$(FC_MODDIR)/gravity_perturbation.$(FC_MODEXT) \
 	$(FC_MODDIR)/image_pnm_par.$(FC_MODEXT) \
+	$(FC_MODDIR)/nonlinear_solver_iwan.$(FC_MODEXT) \
 	$(FC_MODDIR)/pml_par.$(FC_MODEXT) \
 	$(FC_MODDIR)/specfem_par.$(FC_MODEXT) \
 	$(FC_MODDIR)/specfem_par_acoustic.$(FC_MODEXT) \
@@ -354,7 +356,7 @@ $O/initialize_simulation.spec.o: ${SETUP}/version.fh
 ## fault
 $O/fault_solver_dynamic.spec.o: $O/fault_solver_common.spec.o
 $O/fault_solver_kinematic.spec.o: $O/fault_solver_common.spec.o
-$O/compute_forces_viscoelastic.spec.o: $O/fault_solver_dynamic.spec.o
+$O/compute_forces_viscoelastic.spec.o: $O/fault_solver_dynamic.spec.o $O/nonlinear_solver_iwan.spec.o
 $O/compute_forces_viscoelastic_calling_routine.spec.o: $O/fault_solver_dynamic.spec.o $O/fault_solver_kinematic.spec.o
 
 $O/prepare_timerun.spec.o: $O/fault_solver_dynamic.spec.o $O/fault_solver_kinematic.spec.o

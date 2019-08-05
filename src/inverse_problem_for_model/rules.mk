@@ -167,6 +167,7 @@ inverse_problem_for_model_OBJECTS += \
 	$O/locate_source.spec.o \
 	$O/make_gravity.spec.o \
 	$O/noise_tomography.spec.o \
+	$O/nonlinear_solver_iwan.spec.o \
 	$O/pml_allocate_arrays.spec.o \
 	$O/pml_output_VTKs.spec.o \
 	$O/pml_compute_accel_contribution.spec.o \

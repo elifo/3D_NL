@@ -40,6 +40,9 @@
   implicit none
   integer :: ier
   character(len=MAX_STRING_LEN) :: database_name
+  logical:: NONLINEAR_SIMULATION
+  NONLINEAR_SIMULATION = .True.
+
 
   ! user output
   if (myrank == 0) then
@@ -1059,6 +1062,26 @@
     if (ier /= 0) call exit_MPI_without_rank('error allocating array 1575')
     if (ier /= 0) stop 'Error allocating array buffer_send_vector_ext_mesh_s,.. for poroelastic simulations'
   endif
+
+
+  ! Elif Nonlinearity.
+  if (NONLINEAR_SIMULATION) then
+    allocate(sigmastore_xx(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1576')
+    allocate(sigmastore_yy(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1577')    
+    allocate(sigmastore_zz(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1578')    
+    allocate(sigmastore_xy(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1579')   
+    allocate(sigmastore_xz(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1580')    
+    allocate(sigmastore_yz(NGLLX,NGLLY,NGLLZ,NSPEC_AB),stat=ier)
+    if (ier /= 0) call exit_MPI_without_rank('error allocating array 1581')
+    if (ier /= 0) stop 'Error allocating array buffer_send_vector_ext_mesh_s,.. for nonlinearity simulations'
+  endif
+
+
 
   ! user output
   if (myrank == 0) then

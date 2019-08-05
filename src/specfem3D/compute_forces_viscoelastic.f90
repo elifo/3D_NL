@@ -40,6 +40,8 @@
 
   use fault_solver_dynamic, only: Kelvin_Voigt_eta
 
+  use nonlinear_solver_iwan, only: compute_nonlinear_stress
+
   use specfem_par, only: SAVE_MOHO_MESH,USE_LDDRK,xix,xiy,xiz,etax,etay,etaz,gammax,gammay,gammaz, &
                         NSPEC_AB,NGLOB_AB,hprime_xxT,hprime_yyT,hprime_zzT, &
                         hprimewgll_xx,hprimewgll_yy,hprimewgll_zz, &
@@ -58,7 +60,9 @@
                         factor_common_kappa,COMPUTE_AND_STORE_STRAIN,NSPEC_STRAIN_ONLY, &
                         dsdx_top,dsdx_bot, &
                         ispec2D_moho_top,ispec2D_moho_bot, &
-                        nspec_inner_elastic,nspec_outer_elastic,phase_ispec_inner_elastic
+                        nspec_inner_elastic,nspec_outer_elastic,phase_ispec_inner_elastic, &
+                        sigmastore_xx, sigmastore_yy, sigmastore_zz, &
+                        sigmastore_xy, sigmastore_xz, sigmastore_yz
 
   use pml_par, only: is_CPML,spec_to_CPML,accel_elastic_CPML, &
                      PML_dux_dxl,PML_dux_dyl,PML_dux_dzl,PML_duy_dxl,PML_duy_dyl,PML_duy_dzl, &
@@ -157,6 +161,26 @@
             tempy1_att_new,tempy2_att_new,tempy3_att_new, &
             tempz1_att_new,tempz2_att_new,tempz3_att_new
   real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: zero_array
+
+
+  ! Elif - Nonlinearity.
+  logical :: NONLINEAR_SIMULATION
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: dummyx_loc_NL,dummyy_loc_NL, dummyz_loc_NL 
+  real(kind=CUSTOM_REAL), dimension(NGLLX,NGLLY,NGLLZ) :: tempx1_NL,tempx2_NL,tempx3_NL, &
+                                                          tempy1_NL,tempy2_NL,tempy3_NL, &
+                                                          tempz1_NL,tempz2_NL,tempz3_NL
+  real(kind=CUSTOM_REAL) duxdxl_NL,duxdyl_NL,duxdzl_NL,duydxl_NL
+  real(kind=CUSTOM_REAL) duydyl_NL,duydzl_NL,duzdxl_NL,duzdyl_NL,duzdzl_NL
+  double precision :: dsigma_xx,dsigma_yy,dsigma_zz,dsigma_xy,dsigma_xz,dsigma_yz
+
+
+
+  ! Elif - Forcing nonlinearity; to be changed later.
+  !NONLINEAR_SIMULATION = .True.
+  NONLINEAR_SIMULATION = .False.
+
+
+
 
   ! choses inner/outer elements
   if (iphase == 1) then
@@ -258,6 +282,23 @@
           enddo
     endif
 
+
+
+    if (NONLINEAR_SIMULATION) then
+      ! to compute strain rate, get velocity* dt.
+      do k=1,NGLLZ
+        do j=1,NGLLY
+          do i=1,NGLLX
+            iglob = ibool(i,j,k,ispec)
+            dummyx_loc_NL(i,j,k) = deltat * veloc(1,iglob)
+            dummyy_loc_NL(i,j,k) = deltat * veloc(2,iglob)
+            dummyz_loc_NL(i,j,k) = deltat * veloc(3,iglob)
+          enddo
+        enddo
+      enddo
+    endif
+
+
     !------------------------------------------------------------------------------
     !---------------------computation of strain in element-------------------------
     !------------------------------------------------------------------------------
@@ -295,6 +336,19 @@
                      dummyx_loc_att,dummyy_loc_att,dummyz_loc_att, &
                      hprime_xxT,hprime_yyT,hprime_zzT)
     endif
+
+    ! Elif
+    if (NONLINEAR_SIMULATION) then
+      call compute_strain_in_element( &
+                   tempx1_NL,tempx2_NL,tempx3_NL,zero_array,zero_array,zero_array, &
+                   tempy1_NL,tempy2_NL,tempy3_NL,zero_array,zero_array,zero_array, &
+                   tempz1_NL,tempz2_NL,tempz3_NL,zero_array,zero_array,zero_array, &
+                   dummyx_loc_NL,dummyy_loc_NL,dummyz_loc_NL, &
+                   hprime_xxT,hprime_yyT,hprime_zzT)
+    endif
+
+
+
 
     ispec_irreg = irregular_element_number(ispec)
     if (ispec_irreg == 0) jacobianl = jacobian_regular
@@ -443,8 +497,8 @@
                 epsilondev_xz_loc(i,j,k) = 0.5_CUSTOM_REAL * (duzdxl + duxdzl)
                 epsilondev_yz_loc(i,j,k) = 0.5_CUSTOM_REAL * (duzdyl + duydzl)
               endif
+          endif ! end pml
 
-          endif
 
           ! save strain on the Moho boundary
           if (SIMULATION_TYPE == 3 .and. SAVE_MOHO_MESH) then
@@ -541,6 +595,44 @@
             endif
           endif
 
+
+          ! Elif
+          if (NONLINEAR_SIMULATION  .and.  .not. is_CPML(ispec)) then
+
+            if (ispec_irreg /= 0) then !irregular element
+
+              duxdxl_NL = xixl * tempx1_NL(i,j,k) + etaxl * tempx2_NL(i,j,k) + gammaxl * tempx3_NL(i,j,k)
+              duxdyl_NL  = xiyl * tempx1_NL(i,j,k) + etayl * tempx2_NL(i,j,k) + gammayl * tempx3_NL(i,j,k)
+              duxdzl_NL  = xizl * tempx1_NL(i,j,k) + etazl * tempx2_NL(i,j,k) + gammazl * tempx3_NL(i,j,k)
+
+              duydxl_NL = xixl * tempy1_NL(i,j,k) + etaxl * tempy2_NL(i,j,k) + gammaxl * tempy3_NL(i,j,k)
+              duydyl_NL = xiyl * tempy1_NL(i,j,k) + etayl * tempy2_NL(i,j,k) + gammayl * tempy3_NL(i,j,k)
+              duydzl_NL = xizl * tempy1_NL(i,j,k) + etazl * tempy2_NL(i,j,k) + gammazl * tempy3_NL(i,j,k)
+
+              duzdxl_NL = xixl * tempz1_NL(i,j,k) + etaxl * tempz2_NL(i,j,k) + gammaxl * tempz3_NL(i,j,k)
+              duzdyl_NL = xiyl * tempz1_NL(i,j,k) + etayl * tempz2_NL(i,j,k) + gammayl * tempz3_NL(i,j,k)
+              duzdzl_NL = xizl * tempz1_NL(i,j,k) + etazl * tempz2_NL(i,j,k) + gammazl * tempz3_NL(i,j,k)
+            else
+              duxdxl_NL = xix_regular * tempx1_NL(i,j,k)
+              duxdyl_NL = xix_regular * tempx2_NL(i,j,k)
+              duxdzl_NL = xix_regular * tempx3_NL(i,j,k)
+
+              duydxl_NL = xix_regular * tempy1_NL(i,j,k)
+              duydyl_NL = xix_regular * tempy2_NL(i,j,k)
+              duydzl_NL = xix_regular * tempy3_NL(i,j,k)
+
+              duzdxl_NL = xix_regular * tempz1_NL(i,j,k)
+              duzdyl_NL = xix_regular * tempz2_NL(i,j,k)
+              duzdzl_NL = xix_regular * tempz3_NL(i,j,k)
+            endif
+
+          endif
+
+
+          ! Elif
+          ! Stress computation initiates here
+
+
           kappal = kappastore(i,j,k,ispec)
           mul = mustore(i,j,k,ispec)
 
@@ -612,6 +704,44 @@
                sigma_yz = sigma_yz - sum(R_yz(:,i,j,k,ispec))
 
           endif
+
+          if (NONLINEAR_SIMULATION .and. .not. is_CPML(ispec)) then
+
+            ! moduli
+            lambdalplus2mul = kappal + FOUR_THIRDS * mul
+            lambdal = lambdalplus2mul - 2._CUSTOM_REAL * mul
+
+          duxdyl_plus_duydxl = duxdyl + duydxl
+          duzdxl_plus_duxdzl = duzdxl + duxdzl
+          duzdyl_plus_duydzl = duzdyl + duydzl
+
+
+            ! call Iwan routine
+            call compute_nonlinear_stress(mul,lambdal,lambdalplus2mul, &
+                      duxdxl_NL,duydyl_NL,duzdzl_NL, &
+                      duxdyl_NL,duydxl_NL,duzdxl_NL,duxdzl_NL,duzdyl_NL,duydzl_NL, &
+                      dsigma_xx, dsigma_yy, dsigma_zz, dsigma_xy, dsigma_xz, dsigma_yz)
+
+            ! assign to total stress matrix
+            sigmastore_xx(i,j,k,ispec) = sigmastore_xx(i,j,k,ispec)+ dsigma_xx
+            sigmastore_yy(i,j,k,ispec) = sigmastore_yy(i,j,k,ispec)+ dsigma_yy
+            sigmastore_zz(i,j,k,ispec) = sigmastore_zz(i,j,k,ispec)+ dsigma_zz
+            sigmastore_xy(i,j,k,ispec) = sigmastore_xy(i,j,k,ispec)+ dsigma_xy
+            sigmastore_xz(i,j,k,ispec) = sigmastore_xz(i,j,k,ispec)+ dsigma_xz
+            sigmastore_yz(i,j,k,ispec) = sigmastore_yz(i,j,k,ispec)+ dsigma_yz
+
+            ! overwriting
+            sigma_xx = sigmastore_xx(i,j,k,ispec)
+            sigma_yy = sigmastore_yy(i,j,k,ispec)
+            sigma_zz = sigmastore_zz(i,j,k,ispec)
+            sigma_xy = sigmastore_xy(i,j,k,ispec)
+            sigma_xz = sigmastore_xz(i,j,k,ispec)
+            sigma_yz = sigmastore_yz(i,j,k,ispec)
+
+          endif
+
+
+
 
             if (.not. is_CPML(ispec)) then
 
